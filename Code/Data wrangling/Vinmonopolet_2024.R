@@ -57,4 +57,40 @@ filtered_data <- combined_data %>%
 # View the filtered data
 print(filtered_data)
 
+library(readxl)
+library(dplyr)
 
+# Load the postal code dataset
+postal_data <- read_excel("dimpostnummer.xlsx")
+
+# Rename columns to match their purpose in final_data
+postal_data <- postal_data %>%
+  rename(
+    Postal_Code = `Postnummer`,           # Postal code
+    Municipality_Code = `KommuneKode`,    # Municipality code
+    Municipality_Name = `Kommune`,        # Municipality name
+    Region_Code = `FylkeKode`,            # Region code
+    Region_Name = `Fylke`,                # Region name
+    Latitude = `Latitude`,                # Latitude
+    Longitude = `Longitude`               # Longitude
+  )
+
+# Convert Postal_Code to numeric to ensure a proper join
+postal_data <- postal_data %>%
+  mutate(Postal_Code = as.numeric(Postal_Code))
+
+final_data <- final_data %>%
+  mutate(Postal_Code = as.numeric(Postal_Code))
+
+# Merge final_data (stores & revenue) with postal_data (municipality info)
+final_data <- final_data %>%
+  left_join(postal_data, by = "Postal_Code")
+
+# View merged dataset
+head(final_data)
+
+# Save final dataset
+write_csv(final_data, "Vinmonopolet_Stores_Final_With_Municipality.csv")
+
+# View final dataset
+View(final_data)
