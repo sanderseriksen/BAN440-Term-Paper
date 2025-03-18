@@ -60,3 +60,6 @@ print(filtered_data)
 
 # Export the filtered data to an Excel file
 write_xlsx(filtered_data, "filtered_data.xlsx")
+
+# Export the final data to an Excel file
+write_xlsx(final_data, "final_data.xlsx")
