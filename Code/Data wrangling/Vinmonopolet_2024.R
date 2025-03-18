@@ -3,6 +3,7 @@
 # Importing libraries
 library(tidyverse)
 library(readxl)
+library(writexl)
 
 # Set locale to UTF-8
 Sys.setlocale("LC_ALL", "en_US.UTF-8")
@@ -57,3 +58,5 @@ filtered_data <- combined_data %>%
 # View the filtered data
 print(filtered_data)
 
+# Export the filtered data to an Excel file
+write_xlsx(filtered_data, "filtered_data.xlsx")
