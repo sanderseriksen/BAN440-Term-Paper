@@ -40,9 +40,15 @@ values_to_exclude <- c(
   "eLager"
 )
 
+# Column names of combined data
+colnames(combined_data)
+
 # Filter out the specified values from the first column
 filtered_data <- combined_data %>%
-  filter(!.[[1]] %in% values_to_exclude)
+  mutate("2024" = as.numeric(`2024`),
+         "Store" = as.character(`...1`)) %>%
+  filter(!.[[1]] %in% values_to_exclude) %>% 
+  select("Store", "2024")
 
 # View the filtered data
 print(filtered_data)
