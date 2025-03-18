@@ -63,7 +63,6 @@ store_data_clean <- store_data %>%
     GPS_Coordinates = gpsCoord
   )
 
-# Normalize the characters 
 
 # Transforming to normal characters
 store_data_clean$Store_Name <- iconv(store_data_clean$Store_Name, from = "UTF-8", to = "ASCII//TRANSLIT")
