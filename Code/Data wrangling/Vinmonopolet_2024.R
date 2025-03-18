@@ -52,3 +52,8 @@ filtered_data <- combined_data %>%
 
 # View the filtered data
 print(filtered_data)
+
+
+# --------------------------- Combine API with Vinmonopol Data ---------------------------
+
+source("API_extraction_Stores-v0.R")  # Runs the script to update store_data_clean
