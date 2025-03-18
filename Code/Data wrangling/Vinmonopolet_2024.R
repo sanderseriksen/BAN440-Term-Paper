@@ -29,14 +29,18 @@ unique_values <- unique(combined_data$...1)
 
 print(unique_values)
 
+# Transforming to normal characters
+combined_data$...1 <- iconv(combined_data$...1, from = "UTF-8", to = "ASCII//TRANSLIT")
+combined_data$...1 <- trimws(combined_data$...1)
+
 # Define the values to filter out
 values_to_exclude <- c(
-  "Svakvin", "R??dvin", "Hvitvin", "Musserende vin", "Ros??vin", 
+  "Svakvin", "Rodvin", "Hvitvin", "Musserende vin", "Rosevin", 
   "Perlende vin", "Aromatisert vin", "Sider", "Fruktvin", 
-  "Brennevin", "Vodka", "Lik??r", "Whisky", "Akevitt", 
+  "Brennevin", "Vodka", "Likor", "Whisky", "Akevitt", 
   "Brennevin, annet", "Gin", "Druebrennevin", 
-  "Brennevin, n??ytralt < 37,5 %", "Rom", "Bitter", 
-  "Fruktbrennevin", "Genever", "??l", "Alkoholfritt", "Sterkvin", "Totalsum",
+  "Brennevin, noytralt < 37,5 %", "Rom", "Bitter", 
+  "Fruktbrennevin", "Genever", "Ol", "Alkoholfritt", "Sterkvin", "Totalsum",
   "eLager"
 )
 
@@ -52,3 +56,4 @@ filtered_data <- combined_data %>%
 
 # View the filtered data
 print(filtered_data)
+
