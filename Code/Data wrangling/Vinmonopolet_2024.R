@@ -98,3 +98,7 @@ write_csv(final_data, "Vinmonopolet_Stores_Final_With_Municipality.csv")
 
 # View final dataset
 View(final_data)
+
+# Export the final data to an Excel file
+write_xlsx(final_data, "final_data.xlsx")
+
