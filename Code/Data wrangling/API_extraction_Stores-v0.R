@@ -33,7 +33,9 @@ if (status_code(response) == 200) {
 } else {
   print(paste("Error:", status_code(response)))
 }
-
+# Transforming to normal characters
+store_data$storeName <- iconv(store_data$storeName, from = "UTF-8", to = "ASCII//TRANSLIT")
+store_data$storeName <- trimws(store_data$storeName)
 
 # --------------------------- Combine API with Vinmonopol Data ---------------------------
 
@@ -62,6 +64,7 @@ store_data_clean <- store_data %>%
     City = city,
     GPS_Coordinates = gpsCoord
   )
+
 
 # Standardize store names to improve matching
 filtered_data <- filtered_data %>%
