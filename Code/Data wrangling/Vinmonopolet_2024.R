@@ -99,6 +99,43 @@ write_csv(final_data, "Vinmonopolet_Stores_Final_With_Municipality.csv")
 # View final dataset
 View(final_data)
 
+# Remove rows where "2024" column is NA
+final_data <- final_data %>%
+  drop_na(`2024`)  # Drop rows where "2024" column is NA
+
+# Count NA values in Store_ID column
+na_count_store_id <- sum(is.na(final_data$Store_ID))
+
+# Print the result
+print(paste("Number of NA values in Store_ID column:", na_count_store_id))
+
+# Identify row indices with NA in Store_ID
+na_rows_indices <- which(is.na(final_data$Store_ID))
+
+# Print row indices
+print(na_rows_indices)
+# Filter rows where Store_ID is NA
+rows_with_na <- final_data %>% filter(is.na(Municipality_Code))
+
+# View the rows with NA values in Store_ID
+print(rows_with_na)
+
+# Extract stores with NA Store_ID
+na_store_names <- rows_with_na$Store
+print(na_store_names)  # Check which stores are problematic
+# Convert both datasets to lowercase and trim spaces for better matching
+store_data_clean <- store_data_clean %>%
+  mutate(Store_Name = str_trim(str_to_lower(Store_Name)))
+
+# Find potential matches in store_data_clean
+matches <- store_data_clean %>%
+  filter(str_detect(Store_Name, paste(na_store_names, collapse = "|")))
+
+# View matches
+print(matches)
+
+
 # Export the final data to an Excel file
 write_xlsx(final_data, "final_data.xlsx")
+
 

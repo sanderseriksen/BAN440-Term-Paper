@@ -67,11 +67,6 @@ store_data_clean <- store_data %>%
 
 
 
-# Transforming to normal characters
-store_data_clean$Store_Name <- iconv(store_data_clean$Store_Name, from = "UTF-8", to = "ASCII//TRANSLIT")
-store_data_clean$Store_Name <- trimws(store_data_clean$Store_Name)
-
-
 # Standardize store names to improve matching
 filtered_data <- filtered_data %>%
   mutate(Store = str_trim(str_to_lower(Store)))  # Trim spaces and convert to lowercase
