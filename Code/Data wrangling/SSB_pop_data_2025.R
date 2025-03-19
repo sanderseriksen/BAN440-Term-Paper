@@ -8,6 +8,7 @@ library(purrr)
 # Define API URLs
 ssb_url_14216 <- "https://data.ssb.no/api/v0/en/table/14216"
 ssb_url_05212 <- "https://data.ssb.no/api/v0/en/table/05212"
+ssb_url_05277 <- "https://data.ssb.no/api/v0/en/table/05772"
 
 # Function to fetch data from SSB API
 fetch_ssb_data <- function(url, dataset_id) {
@@ -33,6 +34,7 @@ fetch_ssb_data <- function(url, dataset_id) {
 # Fetch data
 data_14216 <- fetch_ssb_data(ssb_url_14216, "14216")
 data_05212 <- fetch_ssb_data(ssb_url_05212, "05212")
+data_05277 <- fetch_ssb_data(ssb_url_05277, "05277")
 
 # Function to extract and clean data
 extract_ssb_data <- function(ssb_dataset, dataset_name) {
