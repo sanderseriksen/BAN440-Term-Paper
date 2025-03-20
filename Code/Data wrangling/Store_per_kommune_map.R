@@ -9,7 +9,7 @@ library(csmaps)
 municipalities <- nor_municip_map_b2024_default_sf 
 
 # Step 2: Read your store dataset
-store_data_path <- "final_data.xlsx"
+store_data_path <- "oppdatert_final_data_oppdatert_updated.xlsx"
 store_data <- readxl::read_excel(store_data_path)
 
 # Step 3: Extract the last 4 digits from "location_code" to get the municipality code
@@ -51,5 +51,5 @@ ggplot(merged_data) +
   labs(title = "Store Distribution by Municipality in Norway")
 
 
-a <- nor_municip_map_b2024_default_dt
+
 
