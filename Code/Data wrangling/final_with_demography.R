@@ -37,3 +37,6 @@ merged_data <- merged_data %>%
 # If you have specific columns to replace NA with 0, you can specify them like this:
 # merged_data <- merged_data %>%
 #   mutate(Store_Info_Column = replace_na(Store_Info_Column, 0))
+
+# Write the merged data to an Excel file
+write_xlsx(merged_data, "final_data_mun.xlsx")
