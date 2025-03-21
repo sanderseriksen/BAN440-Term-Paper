@@ -22,8 +22,8 @@ kommune_data <- read_excel("Kommune_data.xlsx", skip = 3) %>%
 # Read data for demographic data
 demographic_data <- read_excel("Kommune_demo.xlsx", skip = 4) %>%
   rename("Municipality" = "...1",
-         "0-17" = "0-17 år",
-         "18+" = "18 år eller eldre") %>%
+         "0-17" = "0-17 ??r",
+         "18+" = "18 ??r eller eldre") %>%
   filter(if_all(everything(), ~ !is.na(.) & . != 0)) %>% # Remove rows with NA or 0 in any column
   separate(Municipality, into = c("Mun_num", "Mun_name"), sep = " ", extra = "merge", fill = "right") %>%
   separate(Mun_num, into = c("K", "Mun_num"), sep = "-") %>%

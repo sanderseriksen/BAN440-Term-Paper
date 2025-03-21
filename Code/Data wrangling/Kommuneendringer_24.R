@@ -1,50 +1,38 @@
-# Laste inn n??dvendige pakker
+# Laste inn nødvendige biblioteker
 library(readxl)
 library(dplyr)
 library(stringr)
-library(openxlsx)
+library(writexl)
 
-# Laste inn kommuneendringer og oppdatert final data fra Excel
+# Lese inn data fra Excel-filer
+data_df <- read_excel("final_data_20.xlsx")
 kommuneendringer_df <- read_excel("Kommuneendringer_24.xlsx")
-oppdatert_final_data_df <- read_excel("final_data_20.xlsx")
 
-# Gi passende kolonnenavn til kommuneendringer_df
-colnames(kommuneendringer_df) <- c("New_Municipality", "Old_Municipality")
+# Rydde opp i kolonnenavnene ved å bruke de riktige kolonnenavnene
+colnames(kommuneendringer_df) <- c("New_Code", "Old_Codes")
 
-# Funksjon for ?? fjerne spesialtegn og ekstra mellomrom fra kommunenavn
-clean_name <- function(name) {
-  name <- str_replace_all(name, "[^[:alnum:][:space:]]", "") # Fjern spesialtegn
-  name <- str_trim(name) # Fjern ledende og etterf??lgende mellomrom
-  return(name)
-}
+# Splitte gamle kommunenummer (dersom flere gamle kommuner er adskilt med mellomrom)
+kommuneendringer_df$Old_Codes <- str_split(kommuneendringer_df$Old_Codes, " ")
 
-# Ekstraher kommunenummer og kommunenavn fra begge kolonner og rengj??r navnene
-kommuneendringer_df <- kommuneendringer_df %>%
+# Lage en oppslagsliste for gamle koder til nye koder (ensidig mapping)
+kommune_mapping <- setNames(rep(kommuneendringer_df$New_Code, 
+                                times = sapply(kommuneendringer_df$Old_Codes, length)),
+                            unlist(kommuneendringer_df$Old_Codes))
+
+# Oppdatere både Municipality_Code og Municipality_Name i data_df
+data_df <- data_df %>%
+  rowwise() %>%
   mutate(
-    New_Code = str_extract(New_Municipality, "\\d+"),
-    New_Name = clean_name(str_extract(New_Municipality, "-\\s*(.*)")),
-    Old_Code = str_extract(Old_Municipality, "\\d+"),
-    Old_Name = clean_name(str_extract(Old_Municipality, "-\\s*(.*)"))
-  )
+    new_val = if (Municipality_Code %in% names(kommune_mapping)) kommune_mapping[[Municipality_Code]] else NA_character_,
+    Municipality_Code = if (!is.na(new_val)) substr(new_val, 1, 4) else Municipality_Code,
+    Municipality_Name = if (!is.na(new_val)) str_trim(str_remove(new_val, "^[0-9]{4}\\s*-\\s*")) else Municipality_Name
+  ) %>%
+  ungroup() %>%
+  select(-new_val)
 
-# Fjerne mellomrom fra kommunenavn i oppdatert_final_data_df
-oppdatert_final_data_df <- oppdatert_final_data_df %>%
-  mutate(Municipality_Name = clean_name(Municipality_Name))
+# Hardkode rad 121 til at "Municipality_Code" blir 1580 og "Municipality_Name" blir Haram
+data_df[121, "Municipality_Code"] <- "1580"
+data_df[121, "Municipality_Name"] <- "Haram"
 
-# Fjerne duplikater i kommuneendringer_df basert p?? Old_Name, beholde siste rad
-kommuneendringer_df <- kommuneendringer_df %>%
-  group_by(Old_Name) %>%
-  slice_tail(n = 1) %>%
-  ungroup()
-
-# Sl?? sammen dataene basert p?? rensede kommunenavn
-merged_df <- oppdatert_final_data_df %>%
-  left_join(kommuneendringer_df %>% select(Old_Name, New_Code), 
-            by = c("Municipality_Name" = "Old_Name")) %>%
-  mutate(Municipality_Code = ifelse(!is.na(New_Code), New_Code, Municipality_Code)) %>%
-  select(-New_Code)
-
-# Lagre den oppdaterte dataen i en ny Excel-fil
-write.xlsx(merged_df, "final_data_24.xlsx")
-
-print("Oppdateringen er fullf??rt, og filen er lagret som 'final_data_24.xlsx'")
+# Lagre den oppdaterte filen
+write_xlsx(data_df, "final_data_24.xlsx")

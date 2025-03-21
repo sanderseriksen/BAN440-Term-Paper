@@ -5,8 +5,8 @@ library(stringr)
 library(writexl)
 
 # Lese inn data fra Excel-filer
-data_df <- read_excel("final_data_17.xlsx")
-kommuneendringer_df <- read_excel("Kommuneendringer_18.xlsx")
+data_df <- read_excel("final_data_18.xlsx")
+kommuneendringer_df <- read_excel("Kommuneendringer_20.xlsx")
 
 # Rydde opp i kolonnenavnene ved å bruke de riktige kolonnenavnene
 colnames(kommuneendringer_df) <- c("New_Code", "Old_Codes")
@@ -30,5 +30,5 @@ data_df <- data_df %>%
   select(-new_val)
 
 # Lagre den oppdaterte filen
-write_xlsx(data_df, "final_data_18.xlsx")
+write_xlsx(data_df, "final_data_20.xlsx")
 
