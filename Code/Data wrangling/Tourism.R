@@ -83,8 +83,11 @@ Tourism_merged <- left_join(Vinmonopolet_market, Tourism, by = "Municipality_Cod
     n_stays = ifelse(is.na(n_stays), 0, n_stays)
   )
 
+Tourism_test_set <- Tourism_merged %>% 
+  filter(Population < 150000)
+
 # Fitting a linear model
-lm_model <- lm(Number_of_stores ~ Population + n_stays, data = Tourism_merged)
+lm_model <- lm(Number_of_stores ~ n_stays, data = Tourism_test_set)
 
 summary(lm_model)
 
