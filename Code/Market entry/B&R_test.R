@@ -100,6 +100,11 @@ br_data <- br_data %>%
 
 str(br_data)
 
+# Regression model to test
+reg <- lm(as.numeric(Number_of_stores) ~ density, br_data)
+
+summary(reg)
+
 # Fitting the Bresnahan & Reiss model
 library(MASS)
 
