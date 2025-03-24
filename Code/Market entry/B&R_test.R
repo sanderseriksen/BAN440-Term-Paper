@@ -3,6 +3,8 @@
 # relevant libraries
 library(tidyverse)
 library(readxl)
+library(fastDummies)
+library(MASS)
 
 # Set locale to UTF-8
 Sys.setlocale("LC_ALL", "en_US.UTF-8")
@@ -65,11 +67,35 @@ Vinmonopolet_market <- Vinmonopolet %>%
     Sales = sum(`2024`)
   )
 
-# Table of the number of stores per market
-table(Vinmonopolet_market$Number_of_stores)
-
 # Calculate rho, the raw correlation between Population and number of stores
 rho <- cor(Vinmonopolet_market$Population, Vinmonopolet_market$Number_of_stores)
 
+# Consumption per capita, grouped by region
+Vinmonopolet_market %>% 
+  group_by(Region_Name) %>%
+  summarise(
+    consumption = sum(Sales) / sum(Population),
+    Sales = sum(Sales)
+  ) %>% 
+  arrange(desc(consumption))
 
+# Filtering data for B&R
+br_data <- Vinmonopolet_market %>%
+  filter(Population < 150000 & Area > 0 & Population > 0)
 
+# Table of the number of stores per market
+table(br_data$Number_of_stores)
+
+# Adding variables to the data
+br_data <- br_data %>% 
+  mutate(
+    as.factor(Number_of_stores) = Number_of_stores,
+    s = Population / 1000
+  ) %>% 
+  dummy_cols(select_columns = "Number_of_stores")
+
+str(br_data)
+
+model_1 <- polr(Number_of_stores ~ s, data = br_data, method = "probit")
+
+summary(model1)
