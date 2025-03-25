@@ -25,22 +25,39 @@ Vinmonopolet <- read_excel("final_data_mun.xlsx") %>%
       Region_Name == "VESTFOLD" ~ "Vestfold",
       Region_Name == "FINNMARK" ~ "Finnmark",
       Region_Name == "HEDMARK" ~ "Innlandet",
-      Region_Name == "MØRE OG ROMSDAL" ~ "Møre og Romsdal",
+
+      Region_Name == "MCRE OG ROMSDAL" ~ "MC8re og Romsdal",
+
+      Region_Name == "M??RE OG ROMSDAL" ~ "M??re og Romsdal",
+
       Region_Name == "NORDLAND" ~ "Nordland",
       Region_Name == "OSLO" ~ "Oslo",
       Region_Name == "ROGALAND" ~ "Rogaland",
       Region_Name == "TELEMARK" ~ "Telemark",
       Region_Name == "TROMS" ~ "Troms",
-      Region_Name == "SØR-TRØNDELAG" ~ "Trøndelag",
-      Region_Name == "NORD-TRØNDELAG" ~ "Trøndelag",
+
+      Region_Name == "SCR-TRCNDELAG" ~ "TrC8ndelag",
+      Region_Name == "NORD-TRCNDELAG" ~ "TrC8ndelag",
       Region_Name == "SOGN OG FJORDANE" ~ "Vestland",
       Region_Name == "HORDALAND" ~ "Vestland",
-      Region_Name == "ØSTFOLD" ~ "Østfold",
+      Region_Name == "CSTFOLD" ~ "Cstfold",
       is.na(Region_Name) & str_starts(Municipality_Code, "03") ~ "Oslo",
       is.na(Region_Name) & str_starts(Municipality_Code, "11") ~ "Rogaland",
-      is.na(Region_Name) & str_starts(Municipality_Code, "15") ~ "Møre og Romsdal",
+      is.na(Region_Name) & str_starts(Municipality_Code, "15") ~ "MC8re og Romsdal",
       is.na(Region_Name) & str_starts(Municipality_Code, "18") ~ "Nordland",
-      is.na(Region_Name) & str_starts(Municipality_Code, "31") ~ "Østfold",
+      is.na(Region_Name) & str_starts(Municipality_Code, "31") ~ "Cstfold",
+
+      Region_Name == "S??R-TR??NDELAG" ~ "Tr??ndelag",
+      Region_Name == "NORD-TR??NDELAG" ~ "Tr??ndelag",
+      Region_Name == "SOGN OG FJORDANE" ~ "Vestland",
+      Region_Name == "HORDALAND" ~ "Vestland",
+      Region_Name == "??STFOLD" ~ "??stfold",
+      is.na(Region_Name) & str_starts(Municipality_Code, "03") ~ "Oslo",
+      is.na(Region_Name) & str_starts(Municipality_Code, "11") ~ "Rogaland",
+      is.na(Region_Name) & str_starts(Municipality_Code, "15") ~ "M??re og Romsdal",
+      is.na(Region_Name) & str_starts(Municipality_Code, "18") ~ "Nordland",
+      is.na(Region_Name) & str_starts(Municipality_Code, "31") ~ "??stfold",
+
       is.na(Region_Name) & str_starts(Municipality_Code, "32") ~ "Akershus",
       is.na(Region_Name) & str_starts(Municipality_Code, "33") ~ "Buskerud",
       is.na(Region_Name) & str_starts(Municipality_Code, "34") ~ "Innlandet",
@@ -48,7 +65,11 @@ Vinmonopolet <- read_excel("final_data_mun.xlsx") %>%
       is.na(Region_Name) & str_starts(Municipality_Code, "40") ~ "Telemark",
       is.na(Region_Name) & str_starts(Municipality_Code, "42") ~ "Agder",
       is.na(Region_Name) & str_starts(Municipality_Code, "46") ~ "Vestland",
-      is.na(Region_Name) & str_starts(Municipality_Code, "50") ~ "Trøndelag",
+
+      is.na(Region_Name) & str_starts(Municipality_Code, "50") ~ "TrC8ndelag",
+
+      is.na(Region_Name) & str_starts(Municipality_Code, "50") ~ "Tr??ndelag",
+
       is.na(Region_Name) & str_starts(Municipality_Code, "55") ~ "Troms",
       is.na(Region_Name) & str_starts(Municipality_Code, "56") ~ "Finnmark",
       TRUE ~ Region_Name  # Keep existing Region_Name if no conditions are met
@@ -100,10 +121,13 @@ br_data <- br_data %>%
 
 str(br_data)
 
+
 # Regression model to test
 reg <- lm(as.numeric(Number_of_stores) ~ density, br_data)
 
 summary(reg)
+
+
 
 # Fitting the Bresnahan & Reiss model
 library(MASS)
@@ -113,12 +137,20 @@ model_1 <- polr(Number_of_stores ~ s, data = br_data, method = "probit")
 summary(model_1)
 
 
+
 model_2 <- polr(Number_of_stores ~ log(s) + density, data = br_data, method = "probit")
+
+model_2 <- polr(Number_of_stores ~ s + density, data = br_data, method = "probit")
+
 
 summary(model_2)
 
 
+
 ## Model 1: Bresnahan & Reiss ##
+
+## Model 1 ##
+
 
 # Extract coefficients and cutoffs
 lambda1 <- model_1$coefficients  # Estimate for s
