@@ -1,3 +1,4 @@
+
 # -----------------------------
 # Setup: Load Packages
 # -----------------------------
@@ -39,12 +40,34 @@ data <- data %>%
 # 3. Parse Store GPS Coordinates
 # -----------------------------
 # Split store GPS into separate numeric lat/lon
+
+# Load required packages
+library(readxl)      # For reading Excel files
+library(dplyr)       # For data manipulation
+library(tidyr)       # For splitting columns
+library(geosphere)   # For calculating geographical distances using lat/lon
+
+# ---------------------------
+# STEP 1: Load dataset
+# ---------------------------
+
+# Read merged dataset with both Vinmonopolet store info and municipality info
+data <- read_excel("final_data_mun.xlsx")
+
+# ---------------------------
+# STEP 2: Parse store coordinates
+# ---------------------------
+
+# GPS_Coordinates column contains both latitude and longitude as a string separated by ";"
+# We split this into two separate numeric columns: store_lat and store_lon
+
 data <- data %>%
   separate(GPS_Coordinates, into = c("store_lat", "store_lon"), sep = ";", convert = TRUE) %>%
   mutate(
-    store_lat = as.numeric(store_lat),
-    store_lon = as.numeric(store_lon)
+    store_lat = as.numeric(store_lat),   # ensure store latitude is numeric
+    store_lon = as.numeric(store_lon)    # ensure store longitude is numeric
   )
+
 
 # -----------------------------
 # 4. Build Store Location Matrix
@@ -52,30 +75,72 @@ data <- data %>%
 # Extract distinct (lon, lat) of all Vinmonopolet stores
 store_locations <- data %>%
   filter(!is.na(store_lon), !is.na(store_lat)) %>%
+
+# ---------------------------
+# STEP 3: Ensure municipality center coordinates are numeric
+# ---------------------------
+
+# These are already separate in the dataset, but stored as characters — we convert them
+data <- data %>%
+  mutate(
+    Longitude = as.numeric(Longitude),  # longitude of the municipality center
+    Latitude = as.numeric(Latitude)     # latitude of the municipality center
+  )
+
+# ---------------------------
+# STEP 4: Extract store coordinates for distance calculation
+# ---------------------------
+
+# We only want to use valid store locations for calculating distances
+# (some rows in the dataset are just municipality data with no store info)
+store_data <- data %>%
+  filter(!is.na(store_lat), !is.na(store_lon))
+
+# Extract a unique matrix of all Vinmonopolet store locations
+# Format required by geosphere is matrix of (longitude, latitude)
+store_locations <- store_data %>%
+
   select(store_lon, store_lat) %>%
   distinct() %>%
   as.matrix()
 
-# -----------------------------
-# 5. Define Distance Function
-# -----------------------------
-# Compute distance (km) from a point to nearest Vinmonopolet store
+# ---------------------------
+# STEP 5: Define function to calculate distance to nearest store
+# ---------------------------
+
+# For a given municipality center (lon, lat), compute distance to nearest store
+# Uses Haversine formula (accounts for Earth's curvature)
 min_distance_to_store <- function(lon, lat) {
-  if (is.na(lon) || is.na(lat)) return(NA)
-  muni_coord <- matrix(c(lon, lat), nrow = 1)
-  dists <- distHaversine(muni_coord, store_locations)
-  return(min(dists) / 1000)  # convert meters to km
+  if (is.na(lon) || is.na(lat)) {
+    return(NA)  # return NA if municipality coordinates are missing
+  }
+  muni_coord <- matrix(c(lon, lat), nrow = 1)  # convert to matrix format for geosphere
+  dists <- distHaversine(muni_coord, store_locations)  # distances in meters
+  return(min(dists) / 1000)  # convert to kilometers
 }
 
-# -----------------------------
-# 6. Calculate Distance for All Municipalities
-# -----------------------------
-# Use updated Longitude/Latitude columns
+# ---------------------------
+# STEP 6: Apply distance function to each municipality
+# ---------------------------
+
+# For each row (i.e., each municipality center), calculate distance to closest Vinmonopolet store
+# Note: This includes all rows (even ones without a store)
+
 data$dist_nearest_store <- mapply(
   min_distance_to_store,
   data$Longitude,
   data$Latitude
 )
+
+
+# ---------------------------
+# STEP 7: Quick check (optional)
+# ---------------------------
+
+# Check that coordinates are numeric
+str(data$Longitude)
+str(data$Latitude)
+
 
 # -----------------------------
 # 7. Optional: Drop Redundant Columns
