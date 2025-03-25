@@ -41,7 +41,6 @@ br_data <- br_data %>%
   mutate_at(vars(Population, s, log_s, Area, Grensehandel, n_stays, Monthly_salary), scale)
 
 # Correlation matrix
-cor(Vinmonopolet_market[, c("Population", "Area", "Grensehandel", "n_stays", "Monthly_salary", "Dist_nearest")])
 cor(br_data[, c("s", "log_s", "Area", "Grensehandel", "n_stays", "Monthly_salary", "Dist_nearest")])
 
 
@@ -75,6 +74,13 @@ reg <- lm(as.numeric(Number_of_stores) ~ Population + Area + Grensehandel + n_st
           data = Vinmonopolet_market)
 
 summary(reg)
+
+
+# Regression model with intraction terms
+reg_int <- lm(as.numeric(Number_of_stores) ~ log_s + Dist_nearest + log_s : Dist_nearest,
+              data = br_data)
+
+summary(reg_int)
 
 
 ### Fitting models #############################################################
@@ -207,7 +213,7 @@ knitr::kable(ETR_N3, col.names = c("ETR"), digits = 4,
 
 
 
-## Model 4
+## Model 4: The "Dream" model
 
 summary(Vinmonopolet_market$Dist_nearest)
 summary(br_data$Dist_nearest)
@@ -227,3 +233,51 @@ model_5 <- polr(Number_of_stores ~ log_s + Monthly_salary + Grensehandel,
 # Display the summary of the model
 summary(model_5)
 
+
+
+## Model 6
+
+# Fit the model with the specified predictors
+model_6 <- polr(Number_of_stores ~ log_s + log(Dist_nearest) + Grensehandel + n_stays + Monthly_salary,
+                data = br_data, method = "probit")
+
+summary(model_6)
+
+# Extract coefficients and cutoffs
+lambda6 <- model_6$coefficients # Estimates for log_s, log(Dist_nearest), Grensehandel, n_stays, and Monthly_salary
+theta6 <- model_6$zeta # Cutoffs
+
+# Compute S_N using the sample means of all predictors
+X_bar6 <- colMeans(br_data[, c("log_s", "Dist_nearest", "Grensehandel", "n_stays", "Monthly_salary")])
+S_N6 <- exp(theta6 - X_bar6 %*% lambda6)
+
+# Create labels for S_N
+upperb6 <- length(theta6) # Number of thresholds
+slab6 <- paste0("$S_", 1:upperb6, "$")
+names(S_N6) <- slab6
+
+# Compute ETR_N using the cutoffs
+ETR_N6 <- exp(theta6[2:upperb6] - theta6[1:(upperb6-1)]) * (1:(upperb6-1)) / (2:upperb6)
+
+# Create labels for ETR_N
+elab6 <- paste0("$s_", 2:upperb6, "/s_", 1:(upperb6-1), "$")
+names(ETR_N6) <- elab6
+
+# Display the results in a table
+knitr::kable(S_N6, col.names = c("'000s"), digits = 4,
+             caption = 'Entry thresholds for Model 6',
+             booktabs = TRUE)
+
+# Optionally, display the ETR_N6 in a table as well
+knitr::kable(ETR_N6, col.names = c("ETR"), digits = 4,
+             caption = 'Entry Threshold Ratios for Model 6',
+             booktabs = TRUE)
+
+
+## Model 7
+
+# Fit the model with the specified predictors
+model_7 <- polr(Number_of_stores ~ log_s + n_stays,
+                data = br_data, method = "probit")
+
+summary(model_7)
