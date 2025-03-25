@@ -11,8 +11,8 @@ library(writexl)
 Sys.setlocale("LC_ALL", "en_US.UTF-8")
 
 # Load data
-Vinmonopolet <- read_excel("final_data_mun.xlsx") %>% 
-  select(-c(Store_ID, Store_Status, Postal_Code, GPS_Coordinates, Poststed,
+Vinmonopolet <- read_excel("final_data_mun_dist.xlsx") %>% 
+  select(-c(Store_ID, Store_Status, Postal_Code, Poststed,
             PostnummerKategoriKode, PostnummerKategori, Region_Code, 
             Municipality_Name)) %>%
   mutate(
@@ -54,7 +54,8 @@ Vinmonopolet <- read_excel("final_data_mun.xlsx") %>%
       is.na(Region_Name) & str_starts(Municipality_Code, "56") ~ "Finnmark",
       TRUE ~ Region_Name  # Keep existing Region_Name if no conditions are met
     )
-  )
+  ) %>% 
+  select(-Mun_name)
 
 # Aggregating per market data for the Bresnahan & Reiss model
 Vinmonopolet_market <- Vinmonopolet %>%
@@ -65,7 +66,10 @@ Vinmonopolet_market <- Vinmonopolet %>%
     Population = first(Population),
     Area = first(Area),
     Number_of_stores = sum(`2024` > 0),  # Count non-zero sales
-    Sales = sum(`2024`)
+    Sales = sum(`2024`),
+    Lat = first(Latitude),
+    Lon = first(Longitude),
+    Dist_nearest = first(dist_nearest_store),
   )
 
 
@@ -231,13 +235,14 @@ clean_data <- clean_data %>%
 # Merge with the main data set
 Vinmonopolet_market <- left_join(Vinmonopolet_market, clean_data, by = "Municipality_Code")
 
-
+# Write to Excel
+write_xlsx(Vinmonopolet_market, "B&R_data.xlsx")
 
 ## Some model testing #########################################################
 
 # Filtering data for B&R
 br_data <- Vinmonopolet_market %>%
-  filter(Population < 150000 & Area > 0 & Population > 0)
+  filter(Population < 150000 & Area > 0 & Population > 1000)
 
 # Adding variables to the data
 upperb <- 3
@@ -254,25 +259,25 @@ br_data <- br_data %>%
 
 # Scale the numeric variables
 br_data <- br_data %>% 
-  mutate_at(vars(Population, s, log_s, Area, Grensehandel, n_stays, Monthly_salary), scale)
+  mutate_at(vars(Population, s, log_s, Area, Grensehandel, n_stays, Monthly_salary, Dist_nearest), scale)
 
 # Table of the number of stores per market
 table(br_data$Number_of_stores)
 
 # Regression model to test
-reg <- lm(as.numeric(Number_of_stores) ~ Population + Area + Grensehandel + n_stays + Monthly_salary, Vinmonopolet_market)
+reg <- lm(as.numeric(Number_of_stores) ~ Population + Area + Grensehandel + n_stays + Monthly_salary + Dist_nearest, Vinmonopolet_market)
 
 summary(reg)
 
 # Fitting the Bresnahan & Reiss model
 library(MASS)
 
-model_1 <- polr(Number_of_stores ~ s, data = br_data, method = "probit")
+model_1 <- polr(Number_of_stores ~ s + Dist_nearest, data = br_data, method = "probit")
 
 summary(model_1)
 
 
-model_2 <- polr(Number_of_stores ~ log_s + n_stays + Grensehandel + Monthly_salary,
+model_2 <- polr(Number_of_stores ~ s + Dist_nearest,
                 data = br_data, method = "probit")
 
 summary(model_2)
@@ -284,7 +289,7 @@ lambda <- model_2$coefficients  # Estimates for s and density
 theta <- model_2$zeta  # Cutoffs
 
 # Compute S_N using the new predictors
-S_N <- exp(theta - mean(br_data$n_stays) * lambda["n_stays"])
+S_N <- exp(theta - mean(br_data$Dist_nearest) * lambda["Dist_nearest"])
 
 # Create labels for S_N
 upperb <- length(theta)  # Number of thresholds
