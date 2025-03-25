@@ -1,4 +1,4 @@
-### Bresnahan & Reiss test document ###
+#### Bresnahan & Reiss test document ####
 
 # relevant libraries
 library(tidyverse)
@@ -10,86 +10,47 @@ library(knitr)
 Sys.setlocale("LC_ALL", "en_US.UTF-8")
 
 # Load data
-Vinmonopolet <- read_excel("final_data_mun.xlsx") %>% 
-  select(-c(Store_ID, Store_Status, Postal_Code, GPS_Coordinates, Poststed,
-            PostnummerKategoriKode, PostnummerKategori, Region_Code, 
-            Municipality_Name)) %>%
-  mutate(
-    Municipality_Name = Mun_name,
-    Region_Name = case_when(
-      Region_Name == "AUST-AGDER" ~ "Agder",
-      Region_Name == "VEST-AGDER" ~ "Agder",
-      Region_Name == "AKERSHUS" ~ "Akershus",
-      Region_Name == "OPPLAND" ~ "Innlandet",
-      Region_Name == "BUSKERUD" ~ "Buskerud",
-      Region_Name == "VESTFOLD" ~ "Vestfold",
-      Region_Name == "FINNMARK" ~ "Finnmark",
-      Region_Name == "HEDMARK" ~ "Innlandet",
-
-      Region_Name == "MCRE OG ROMSDAL" ~ "MC8re og Romsdal",
-
-      Region_Name == "M??RE OG ROMSDAL" ~ "M??re og Romsdal",
-
-      Region_Name == "NORDLAND" ~ "Nordland",
-      Region_Name == "OSLO" ~ "Oslo",
-      Region_Name == "ROGALAND" ~ "Rogaland",
-      Region_Name == "TELEMARK" ~ "Telemark",
-      Region_Name == "TROMS" ~ "Troms",
-
-      Region_Name == "SCR-TRCNDELAG" ~ "TrC8ndelag",
-      Region_Name == "NORD-TRCNDELAG" ~ "TrC8ndelag",
-      Region_Name == "SOGN OG FJORDANE" ~ "Vestland",
-      Region_Name == "HORDALAND" ~ "Vestland",
-      Region_Name == "CSTFOLD" ~ "Cstfold",
-      is.na(Region_Name) & str_starts(Municipality_Code, "03") ~ "Oslo",
-      is.na(Region_Name) & str_starts(Municipality_Code, "11") ~ "Rogaland",
-      is.na(Region_Name) & str_starts(Municipality_Code, "15") ~ "MC8re og Romsdal",
-      is.na(Region_Name) & str_starts(Municipality_Code, "18") ~ "Nordland",
-      is.na(Region_Name) & str_starts(Municipality_Code, "31") ~ "Cstfold",
-
-      Region_Name == "S??R-TR??NDELAG" ~ "Tr??ndelag",
-      Region_Name == "NORD-TR??NDELAG" ~ "Tr??ndelag",
-      Region_Name == "SOGN OG FJORDANE" ~ "Vestland",
-      Region_Name == "HORDALAND" ~ "Vestland",
-      Region_Name == "??STFOLD" ~ "??stfold",
-      is.na(Region_Name) & str_starts(Municipality_Code, "03") ~ "Oslo",
-      is.na(Region_Name) & str_starts(Municipality_Code, "11") ~ "Rogaland",
-      is.na(Region_Name) & str_starts(Municipality_Code, "15") ~ "M??re og Romsdal",
-      is.na(Region_Name) & str_starts(Municipality_Code, "18") ~ "Nordland",
-      is.na(Region_Name) & str_starts(Municipality_Code, "31") ~ "??stfold",
-
-      is.na(Region_Name) & str_starts(Municipality_Code, "32") ~ "Akershus",
-      is.na(Region_Name) & str_starts(Municipality_Code, "33") ~ "Buskerud",
-      is.na(Region_Name) & str_starts(Municipality_Code, "34") ~ "Innlandet",
-      is.na(Region_Name) & str_starts(Municipality_Code, "39") ~ "Vestfold",
-      is.na(Region_Name) & str_starts(Municipality_Code, "40") ~ "Telemark",
-      is.na(Region_Name) & str_starts(Municipality_Code, "42") ~ "Agder",
-      is.na(Region_Name) & str_starts(Municipality_Code, "46") ~ "Vestland",
-
-      is.na(Region_Name) & str_starts(Municipality_Code, "50") ~ "TrC8ndelag",
-
-      is.na(Region_Name) & str_starts(Municipality_Code, "50") ~ "Tr??ndelag",
-
-      is.na(Region_Name) & str_starts(Municipality_Code, "55") ~ "Troms",
-      is.na(Region_Name) & str_starts(Municipality_Code, "56") ~ "Finnmark",
-      TRUE ~ Region_Name  # Keep existing Region_Name if no conditions are met
-    )
-  )
-
-# Aggregating per market data for the Bresnahan & Reiss model
-Vinmonopolet_market <- Vinmonopolet %>%
-  group_by(Municipality_Code) %>%
-  summarise(
-    Mun_name = first(Municipality_Name),
-    Region_Name = first(Region_Name),
-    Population = first(Population),
-    Area = first(Area),
-    Number_of_stores = sum(`2024` > 0),  # Count non-zero sales
-    Sales = sum(`2024`)
-  )
+Vinmonopolet_market <- read_excel("B&R_data.xlsx")
 
 # Calculate rho, the raw correlation between Population and number of stores
 rho <- cor(Vinmonopolet_market$Population, Vinmonopolet_market$Number_of_stores)
+
+
+
+## Data preparation ############################################################
+
+# Filtering data for B&R
+br_data <- Vinmonopolet_market %>%
+  filter(Population < 150000 & Area > 0 & Population > 0)
+
+# Adding variables to the data
+upperb <- 3
+
+br_data <- br_data %>% 
+  mutate(
+    s = Population / 1000,
+    log_s = log(s),
+    density = Number_of_stores / Area,
+    Number_of_stores = as.factor(ifelse(Number_of_stores <= upperb, Number_of_stores, upperb))
+  ) %>% 
+  dummy_cols(select_columns = "Number_of_stores") %>% 
+  mutate_at(vars(starts_with("Number_of_stores")), as.factor)
+
+# Scale the numeric variables
+br_data <- br_data %>% 
+  mutate_at(vars(Population, s, log_s, Area, Grensehandel, n_stays, Monthly_salary, Dist_nearest), scale)
+
+
+
+
+
+
+## Some interesting statistics ################################################
+
+# These justify adding the variables to the data
+
+# Table of the number of stores per market
+table(br_data$Number_of_stores)
 
 # Consumption per capita, grouped by region
 Vinmonopolet_market %>% 
@@ -100,57 +61,36 @@ Vinmonopolet_market %>%
   ) %>% 
   arrange(desc(consumption))
 
-# Filtering data for B&R
-br_data <- Vinmonopolet_market %>%
-  filter(Population < 150000 & Area > 0 & Population > 0)
 
-# Table of the number of stores per market
-table(br_data$Number_of_stores)
 
-# Adding variables to the data
-upperb <- 2
 
-br_data <- br_data %>% 
-  mutate(
-    s = Population / 1000,
-    density = Number_of_stores / Area,
-    Number_of_stores = as.factor(ifelse(Number_of_stores <= upperb, Number_of_stores, upperb))
-  ) %>% 
-  dummy_cols(select_columns = "Number_of_stores") %>% 
-  mutate_at(vars(starts_with("Number_of_stores")), as.factor)
 
-str(br_data)
-
+## Linear regression model #####################################################
 
 # Regression model to test
-reg <- lm(as.numeric(Number_of_stores) ~ density, br_data)
+reg <- lm(as.numeric(Number_of_stores) ~ Population + Area + Grensehandel + n_stays + Monthly_salary + Dist_nearest,
+          data = Vinmonopolet_market)
 
 summary(reg)
 
 
 
-# Fitting the Bresnahan & Reiss model
+
+
+
+
+### Fitting models #############################################################
+
+# For municipalities with population from 0 to 150,000
+
+# Library necessary for the polr function. 
+# select() does not work after this is loaded
 library(MASS)
 
+# Model 1: Bresnahan & Reiss
 model_1 <- polr(Number_of_stores ~ s, data = br_data, method = "probit")
 
 summary(model_1)
-
-
-
-model_2 <- polr(Number_of_stores ~ log(s) + density, data = br_data, method = "probit")
-
-model_2 <- polr(Number_of_stores ~ s + density, data = br_data, method = "probit")
-
-
-summary(model_2)
-
-
-
-## Model 1: Bresnahan & Reiss ##
-
-## Model 1 ##
-
 
 # Extract coefficients and cutoffs
 lambda1 <- model_1$coefficients  # Estimate for s
@@ -179,33 +119,88 @@ kable(S_N1, col.names = c("'000s"), digits = 4,
       caption = 'Entry thresholds',
       booktabs = TRUE)
 
-## Model 2 ##
+
+
+
+
+
+## Model 2
+# Fit the model with two predictors
+model_2 <- polr(Number_of_stores ~ s + Dist_nearest, data = br_data, method = "probit")
+
+# Display the summary of the model
+summary(model_2)
 
 # Extract coefficients and cutoffs
-lambda <- model_2$coefficients  # Estimates for s and density
-theta <- model_2$zeta  # Cutoffs
+lambda2 <- model_2$coefficients # Estimates for s and density
+theta2 <- model_2$zeta # Cutoffs
 
 # Compute S_N using the new predictors
-S_N <- exp(theta - mean(br_data$density) * lambda["density"])
+S_N2 <- exp(theta2 - mean(br_data$Dist_nearest) * lambda2["Dist_nearest"])
 
 # Create labels for S_N
-upperb <- length(theta)  # Number of thresholds
-slab <- paste0("$S_", 1:upperb, "$")
-names(S_N) <- slab
+upperb2 <- length(theta2) # Number of thresholds
+slab2 <- paste0("$S_", 1:upperb2, "$")
+names(S_N2) <- slab2
 
 # Compute ETR_N using the cutoffs
-ETR_N <- exp(theta[2:upperb] - theta[1:(upperb-1)]) * (1:(upperb-1)) / (2:upperb)
+ETR_N2 <- exp(theta2[2:upperb2] - theta2[1:(upperb2-1)]) * (1:(upperb2-1)) / (2:upperb2)
 
 # Create labels for ETR_N
-elab <- paste0("$s_", 2:upperb, "/s_", 1:(upperb-1), "$")
-names(ETR_N) <- elab
+elab2 <- paste0("$s_", 2:upperb2, "/s_", 1:(upperb2-1), "$")
+names(ETR_N2) <- elab2
 
 # Print results
-S_N
-ETR_N
+S_N2
+ETR_N2
 
-kable(S_N, col.names = c("'000s"), digits = 4,
-             caption = 'Entry thresholds',
+# Display the results in a table
+kable(S_N2, col.names = c("'000s"), digits = 4,
+      caption = 'Entry thresholds',
+      booktabs = TRUE)
+
+# Display the frequency table of the Number_of_stores variable
+table(br_data$Number_of_stores)
+
+
+
+
+## Model 3
+
+# Fit the model with the specified predictors
+model_3 <- polr(Number_of_stores ~ log_s + Monthly_salary + Grensehandel + n_stays,
+                data = br_data, method = "probit")
+
+# Display the summary of the model
+summary(model_3)
+
+# Extract coefficients and cutoffs
+lambda3 <- model_3$coefficients # Estimates for log_s, Monthly_salary, Grensehandel, and n_stays
+theta3 <- model_3$zeta # Cutoffs
+
+# Compute S_N using the sample means of all predictors
+X_bar3 <- colMeans(br_data[, c("log_s", "Monthly_salary", "Grensehandel", "n_stays")])
+S_N3 <- exp(theta3 - X_bar3 %*% lambda3)
+
+# Create labels for S_N
+upperb3 <- length(theta3) # Number of thresholds
+slab3 <- paste0("$S_", 1:upperb3, "$")
+names(S_N3) <- slab3
+
+# Compute ETR_N using the cutoffs
+ETR_N3 <- exp(theta3[2:upperb3] - theta3[1:(upperb3-1)]) * (1:(upperb3-1)) / (2:upperb3)
+
+# Create labels for ETR_N
+elab3 <- paste0("$s_", 2:upperb3, "/s_", 1:(upperb3-1), "$")
+names(ETR_N3) <- elab3
+
+# Display the results in a table
+knitr::kable(S_N3, col.names = c("'000s"), digits = 4,
+             caption = 'Entry thresholds for Model 3',
              booktabs = TRUE)
 
-table(br_data$Number_of_stores)
+# Optionally, display the ETR_N3 in a table as well
+knitr::kable(ETR_N3, col.names = c("ETR"), digits = 4,
+             caption = 'Entry Threshold Ratios for Model 3',
+             booktabs = TRUE)
+
