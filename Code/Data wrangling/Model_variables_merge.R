@@ -237,10 +237,7 @@ Vinmonopolet_market <- left_join(Vinmonopolet_market, clean_data, by = "Municipa
 
 # Filtering data for B&R
 br_data <- Vinmonopolet_market %>%
-  filter(Population < 50000 & Area > 0 & Population > 1000)
-
-# Table of the number of stores per market
-table(br_data$Number_of_stores)
+  filter(Population < 150000 & Area > 0 & Population > 0)
 
 # Adding variables to the data
 upperb <- 3
@@ -248,27 +245,67 @@ upperb <- 3
 br_data <- br_data %>% 
   mutate(
     s = Population / 1000,
+    log_s = log(s),
     density = Number_of_stores / Area,
     Number_of_stores = as.factor(ifelse(Number_of_stores <= upperb, Number_of_stores, upperb))
   ) %>% 
   dummy_cols(select_columns = "Number_of_stores") %>% 
   mutate_at(vars(starts_with("Number_of_stores")), as.factor)
 
+# Scale the numeric variables
+br_data <- br_data %>% 
+  mutate_at(vars(Population, s, log_s, Area, Grensehandel, n_stays, Monthly_salary), scale)
+
+# Table of the number of stores per market
+table(br_data$Number_of_stores)
+
 # Regression model to test
-reg <- lm(as.numeric(Number_of_stores) ~ s, br_data)
+reg <- lm(as.numeric(Number_of_stores) ~ Population + Area + Grensehandel + n_stays + Monthly_salary, Vinmonopolet_market)
 
 summary(reg)
 
 # Fitting the Bresnahan & Reiss model
 library(MASS)
 
-model_1 <- polr(Number_of_stores ~ log(s), data = br_data, method = "probit")
+model_1 <- polr(Number_of_stores ~ s, data = br_data, method = "probit")
 
 summary(model_1)
 
 
-model_2 <- polr(Number_of_stores ~ log(s) + Grensehandel
-                , data = br_data, method = "probit")
+model_2 <- polr(Number_of_stores ~ log_s + n_stays + Grensehandel + Monthly_salary,
+                data = br_data, method = "probit")
 
 summary(model_2)
+
+## Model 2 ##
+
+# Extract coefficients and cutoffs
+lambda <- model_2$coefficients  # Estimates for s and density
+theta <- model_2$zeta  # Cutoffs
+
+# Compute S_N using the new predictors
+S_N <- exp(theta - mean(br_data$n_stays) * lambda["n_stays"])
+
+# Create labels for S_N
+upperb <- length(theta)  # Number of thresholds
+slab <- paste0("$S_", 1:upperb, "$")
+names(S_N) <- slab
+
+# Compute ETR_N using the cutoffs
+ETR_N <- exp(theta[2:upperb] - theta[1:(upperb-1)]) * (1:(upperb-1)) / (2:upperb)
+
+# Create labels for ETR_N
+elab <- paste0("$s_", 2:upperb, "/s_", 1:(upperb-1), "$")
+names(ETR_N) <- elab
+
+# Print results
+S_N
+ETR_N
+
+kable(S_N, col.names = c("'000s"), digits = 4,
+      caption = 'Entry thresholds',
+      booktabs = TRUE)
+
+table(br_data$Number_of_stores)
+
 
