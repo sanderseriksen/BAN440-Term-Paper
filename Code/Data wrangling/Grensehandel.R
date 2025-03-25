@@ -7,6 +7,9 @@ library(tidyverse)
 library(readxl)
 library(writexl)
 
+# Set locale to UTF-8
+Sys.setlocale("LC_ALL", "en_US.UTF-8")
+
 # Load the weights data
 weights <- read_excel("Grensehandel_weights.xlsx", skip = 3) %>% 
   slice(1) %>% 
@@ -32,23 +35,24 @@ regional <- regional %>%
     Grensehandel = Total_sale * weight_grensehandel
   )
 
-# Split the "Vestlandet" region row into three new rows: "Rogaland", "Vestland" and "Møre og Romsdal"
-# And divide the grensehandel value by three
+# Split the "Vestlandet" region row into three new rows: "Rogaland", "Vestland" and "M??re og Romsdal"
 regional <- regional %>%
-  mutate(
-    Grensehandel = ifelse(Region == "Vestlandet", Grensehandel / 3, Grensehandel)
-  ) %>%
   rbind(
     regional %>% filter(Region == "Vestlandet") %>% mutate(Region = "Rogaland"),
     regional %>% filter(Region == "Vestlandet") %>% mutate(Region = "Vestland"),
-    regional %>% filter(Region == "Vestlandet") %>% mutate(Region = "Møre og Romsdal")
+    regional %>% filter(Region == "Vestlandet") %>% mutate(Region = "M??re og Romsdal")
   ) %>%
   filter(Region != "Vestlandet")
 
-# Divide the grensehandel value by three for "Rogaland", "Vestland" and "Møre og Romsdal"
+# Divide the grensehandel value by three for "Rogaland", "Vestland" and "M??re og Romsdal"
 regional <- regional %>%
   mutate(
-    Grensehandel = ifelse(Region == "Rogaland" | Region == "Vestland" | Region == "Møre og Romsdal", Grensehandel / 3, Grensehandel)
+    Grensehandel = case_when(
+      Region == "Rogaland" ~ Grensehandel * 0.35,
+      Region == "Vestland" ~ Grensehandel * 0.46,
+      Region == "M??re og Romsdal" ~ Grensehandel * 0.19,
+      TRUE ~ Grensehandel  # Keep the original value for other regions
+    )
   )
 
 # Split the "Nord-Norge" region row into three new rows: "Nordland", "Troms" and "Finnmark"
@@ -67,7 +71,12 @@ regional <- regional %>%
 # Divide the grensehandel value by three for "Nordland", "Troms" and "Finnmark"
 regional <- regional %>%
   mutate(
-    Grensehandel = ifelse(Region == "Nordland" | Region == "Troms" | Region == "Finnmark", Grensehandel / 3, Grensehandel)
+    Grensehandel = case_when(
+      Region == "Nordland" ~ Grensehandel * 0.5,
+      Region == "Troms" ~ Grensehandel * 0.35,
+      Region == "Finnmark" ~ Grensehandel * 0.15,
+      TRUE ~ Grensehandel  # Keep the original value for other regions
+    )
   )
 
 # Split the "Agder, Telemark, Buskerud og Vestfold" column into four new columns: "Agder", "Telemark", "Buskerud" and "Vestfold"
@@ -87,8 +96,17 @@ regional <- regional %>%
 # Divide the grensehandel value by four for "Agder", "Telemark", "Buskerud" and "Vestfold"
 regional <- regional %>%
   mutate(
-    Grensehandel = ifelse(Region == "Agder" | Region == "Telemark" | Region == "Buskerud" | Region == "Vestfold", Grensehandel / 4, Grensehandel)
+    Grensehandel = case_when(
+      Region == "Agder" ~ Grensehandel * 0.31,
+      Region == "Telemark" ~ Grensehandel * 0.17,
+      Region == "Buskerud" ~ Grensehandel * 0.26,
+      Region == "Vestfold" ~ Grensehandel * 0.26,
+      TRUE ~ Grensehandel  # Keep the original value for other regions
+    )
   )
+
+# Removing the "total_sale" column from the regional data set
+regional <- regional %>% select(-Total_sale)
 
 # Load the main data set
 Vinmonopolet <- read_excel("final_data_mun.xlsx") %>% 
@@ -106,22 +124,22 @@ Vinmonopolet <- read_excel("final_data_mun.xlsx") %>%
       Region_Name == "VESTFOLD" ~ "Vestfold",
       Region_Name == "FINNMARK" ~ "Finnmark",
       Region_Name == "HEDMARK" ~ "Innlandet",
-      Region_Name == "MØRE OG ROMSDAL" ~ "Møre og Romsdal",
+      Region_Name == "M??RE OG ROMSDAL" ~ "M??re og Romsdal",
       Region_Name == "NORDLAND" ~ "Nordland",
       Region_Name == "OSLO" ~ "Oslo",
       Region_Name == "ROGALAND" ~ "Rogaland",
       Region_Name == "TELEMARK" ~ "Telemark",
       Region_Name == "TROMS" ~ "Troms",
-      Region_Name == "SØR-TRØNDELAG" ~ "Trøndelag",
-      Region_Name == "NORD-TRØNDELAG" ~ "Trøndelag",
+      Region_Name == "S??R-TRCNDELAG" ~ "Tr??ndelag",
+      Region_Name == "NORD-TR??NDELAG" ~ "Tr??ndelag",
       Region_Name == "SOGN OG FJORDANE" ~ "Vestland",
       Region_Name == "HORDALAND" ~ "Vestland",
-      Region_Name == "ØSTFOLD" ~ "Østfold",
+      Region_Name == "??STFOLD" ~ "??stfold",
       is.na(Region_Name) & str_starts(Municipality_Code, "03") ~ "Oslo",
       is.na(Region_Name) & str_starts(Municipality_Code, "11") ~ "Rogaland",
-      is.na(Region_Name) & str_starts(Municipality_Code, "15") ~ "Møre og Romsdal",
+      is.na(Region_Name) & str_starts(Municipality_Code, "15") ~ "M??re og Romsdal",
       is.na(Region_Name) & str_starts(Municipality_Code, "18") ~ "Nordland",
-      is.na(Region_Name) & str_starts(Municipality_Code, "31") ~ "Østfold",
+      is.na(Region_Name) & str_starts(Municipality_Code, "31") ~ "??stfold",
       is.na(Region_Name) & str_starts(Municipality_Code, "32") ~ "Akershus",
       is.na(Region_Name) & str_starts(Municipality_Code, "33") ~ "Buskerud",
       is.na(Region_Name) & str_starts(Municipality_Code, "34") ~ "Innlandet",
@@ -129,7 +147,7 @@ Vinmonopolet <- read_excel("final_data_mun.xlsx") %>%
       is.na(Region_Name) & str_starts(Municipality_Code, "40") ~ "Telemark",
       is.na(Region_Name) & str_starts(Municipality_Code, "42") ~ "Agder",
       is.na(Region_Name) & str_starts(Municipality_Code, "46") ~ "Vestland",
-      is.na(Region_Name) & str_starts(Municipality_Code, "50") ~ "Trøndelag",
+      is.na(Region_Name) & str_starts(Municipality_Code, "50") ~ "Tr??ndelag",
       is.na(Region_Name) & str_starts(Municipality_Code, "55") ~ "Troms",
       is.na(Region_Name) & str_starts(Municipality_Code, "56") ~ "Finnmark",
       TRUE ~ Region_Name  # Keep existing Region_Name if no conditions are met
@@ -149,7 +167,7 @@ Vinmonopolet_market <- Vinmonopolet %>%
   )
 
 # Merge the regional data with the main data set on Region_Name in the Vinmonopolet_market data set and Region in the regional data set
-Vinmonopolet_market <- left_join(Vinmonopolet_market, regional, by = c("Region_Name" = "Region"))
+Vinmonopolet_market <- left_join(Vinmonopolet_market, regional, by = c("Region_Name" = "Region")) 
 
 # Linear model to check if the grensehandel is significant
 model <- lm(Number_of_stores ~ Population + Grensehandel, data = Vinmonopolet_market)
