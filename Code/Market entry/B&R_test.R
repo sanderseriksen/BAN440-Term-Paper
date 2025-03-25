@@ -38,8 +38,11 @@ br_data <- br_data %>%
 
 # Scale the numeric variables
 br_data <- br_data %>% 
-  mutate_at(vars(Population, s, log_s, Area, Grensehandel, n_stays, Monthly_salary, Dist_nearest), scale)
+  mutate_at(vars(Population, s, log_s, Area, Grensehandel, n_stays, Monthly_salary), scale)
 
+# Correlation matrix
+cor(Vinmonopolet_market[, c("Population", "Area", "Grensehandel", "n_stays", "Monthly_salary", "Dist_nearest")])
+cor(br_data[, c("s", "log_s", "Area", "Grensehandel", "n_stays", "Monthly_salary", "Dist_nearest")])
 
 
 
@@ -74,11 +77,6 @@ reg <- lm(as.numeric(Number_of_stores) ~ Population + Area + Grensehandel + n_st
 summary(reg)
 
 
-
-
-
-
-
 ### Fitting models #############################################################
 
 # For municipalities with population from 0 to 150,000
@@ -88,7 +86,7 @@ summary(reg)
 library(MASS)
 
 # Model 1: Bresnahan & Reiss
-model_1 <- polr(Number_of_stores ~ s, data = br_data, method = "probit")
+model_1 <- polr(Number_of_stores ~ log_s, data = br_data, method = "probit")
 
 summary(model_1)
 
@@ -203,4 +201,29 @@ knitr::kable(S_N3, col.names = c("'000s"), digits = 4,
 knitr::kable(ETR_N3, col.names = c("ETR"), digits = 4,
              caption = 'Entry Threshold Ratios for Model 3',
              booktabs = TRUE)
+
+
+
+
+
+
+## Model 4
+
+summary(Vinmonopolet_market$Dist_nearest)
+summary(br_data$Dist_nearest)
+
+# Fit the model with the specified predictors
+model_4 <- polr(Number_of_stores ~ log_s + Monthly_salary + Grensehandel + n_stays + Dist_nearest,
+                data = br_data, method = "probit")
+
+
+
+## Model 5
+
+# Fit the model with the specified predictors
+model_5 <- polr(Number_of_stores ~ log_s + Monthly_salary + Grensehandel,
+                data = br_data, method = "probit")
+
+# Display the summary of the model
+summary(model_5)
 
