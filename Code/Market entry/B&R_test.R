@@ -122,67 +122,85 @@ kable(S_N1, col.names = c("'000s"), digits = 4,
 
 
 
-model_2 <- polr(Number_of_stores ~ log(s) + density, data = br_data, method = "probit")
 
+
+## Model 2
+# Fit the model with two predictors
+model_2 <- polr(Number_of_stores ~ s + Dist_nearest, data = br_data, method = "probit")
+
+# Display the summary of the model
 summary(model_2)
 
-
-## Model 1: Bresnahan & Reiss ##
-
 # Extract coefficients and cutoffs
-lambda1 <- model_1$coefficients  # Estimate for s
-theta1 <- model_1$zeta  # Cutoff points
+lambda2 <- model_2$coefficients # Estimates for s and density
+theta2 <- model_2$zeta # Cutoffs
 
-# Compute S_N (Thresholds for s)
-S_N1 <- exp(theta1)  # Since there is only one predictor, no need for mean adjustment
+# Compute S_N using the new predictors
+S_N2 <- exp(theta2 - mean(br_data$Dist_nearest) * lambda2["Dist_nearest"])
 
 # Create labels for S_N
-upperb1 <- length(theta1)  # Number of thresholds
-slab1 <- paste0("$S_", 1:upperb1, "$")
-names(S_N1) <- slab1
+upperb2 <- length(theta2) # Number of thresholds
+slab2 <- paste0("$S_", 1:upperb2, "$")
+names(S_N2) <- slab2
 
 # Compute ETR_N using the cutoffs
-ETR_N1 <- exp(theta1[2:upperb1] - theta1[1:(upperb1-1)]) * (1:(upperb1-1)) / (2:upperb1)
+ETR_N2 <- exp(theta2[2:upperb2] - theta2[1:(upperb2-1)]) * (1:(upperb2-1)) / (2:upperb2)
 
 # Create labels for ETR_N
-elab1 <- paste0("$s_", 2:upperb1, "/s_", 1:(upperb1-1), "$")
-names(ETR_N1) <- elab1
+elab2 <- paste0("$s_", 2:upperb2, "/s_", 1:(upperb2-1), "$")
+names(ETR_N2) <- elab2
 
 # Print results
-S_N1
-ETR_N1
+S_N2
+ETR_N2
 
-kable(S_N1, col.names = c("'000s"), digits = 4,
+# Display the results in a table
+kable(S_N2, col.names = c("'000s"), digits = 4,
       caption = 'Entry thresholds',
       booktabs = TRUE)
 
-## Model 2 ##
+# Display the frequency table of the Number_of_stores variable
+table(br_data$Number_of_stores)
+
+
+
+
+## Model 3
+
+# Fit the model with the specified predictors
+model_3 <- polr(Number_of_stores ~ log_s + Monthly_salary + Grensehandel + n_stays,
+                data = br_data, method = "probit")
+
+# Display the summary of the model
+summary(model_3)
 
 # Extract coefficients and cutoffs
-lambda <- model_2$coefficients  # Estimates for s and density
-theta <- model_2$zeta  # Cutoffs
+lambda3 <- model_3$coefficients # Estimates for log_s, Monthly_salary, Grensehandel, and n_stays
+theta3 <- model_3$zeta # Cutoffs
 
-# Compute S_N using the new predictors
-S_N <- exp(theta - mean(br_data$density) * lambda["density"])
+# Compute S_N using the sample means of all predictors
+X_bar3 <- colMeans(br_data[, c("log_s", "Monthly_salary", "Grensehandel", "n_stays")])
+S_N3 <- exp(theta3 - X_bar3 %*% lambda3)
 
 # Create labels for S_N
-upperb <- length(theta)  # Number of thresholds
-slab <- paste0("$S_", 1:upperb, "$")
-names(S_N) <- slab
+upperb3 <- length(theta3) # Number of thresholds
+slab3 <- paste0("$S_", 1:upperb3, "$")
+names(S_N3) <- slab3
 
 # Compute ETR_N using the cutoffs
-ETR_N <- exp(theta[2:upperb] - theta[1:(upperb-1)]) * (1:(upperb-1)) / (2:upperb)
+ETR_N3 <- exp(theta3[2:upperb3] - theta3[1:(upperb3-1)]) * (1:(upperb3-1)) / (2:upperb3)
 
 # Create labels for ETR_N
-elab <- paste0("$s_", 2:upperb, "/s_", 1:(upperb-1), "$")
-names(ETR_N) <- elab
+elab3 <- paste0("$s_", 2:upperb3, "/s_", 1:(upperb3-1), "$")
+names(ETR_N3) <- elab3
 
-# Print results
-S_N
-ETR_N
-
-kable(S_N, col.names = c("'000s"), digits = 4,
-             caption = 'Entry thresholds',
+# Display the results in a table
+knitr::kable(S_N3, col.names = c("'000s"), digits = 4,
+             caption = 'Entry thresholds for Model 3',
              booktabs = TRUE)
 
-table(br_data$Number_of_stores)
+# Optionally, display the ETR_N3 in a table as well
+knitr::kable(ETR_N3, col.names = c("ETR"), digits = 4,
+             caption = 'Entry Threshold Ratios for Model 3',
+             booktabs = TRUE)
+
