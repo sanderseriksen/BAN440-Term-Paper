@@ -5,6 +5,7 @@ library(tidyverse)
 library(readxl)
 library(fastDummies)
 library(knitr)
+library(stargazer)
 
 # Set locale to UTF-8
 Sys.setlocale("LC_ALL", "en_US.UTF-8")
@@ -38,7 +39,7 @@ br_data <- br_data %>%
 
 # Scale the numeric variables
 br_data <- br_data %>% 
-  mutate_at(vars(Population, s, log_s, Area, Grensehandel, n_stays, Monthly_salary), scale)
+  mutate_at(vars(Population, s, log_s, Area, Grensehandel, n_stays, Monthly_salary, Dist_nearest), scale)
 
 # Correlation matrix
 cor(br_data[, c("s", "log_s", "Area", "Grensehandel", "n_stays", "Monthly_salary", "Dist_nearest")])
@@ -75,6 +76,15 @@ reg <- lm(as.numeric(Number_of_stores) ~ Population + Area + Grensehandel + n_st
 
 summary(reg)
 
+reg1 <- lm(as.numeric(Number_of_stores) ~ Population + Area + Grensehandel + n_stays + Monthly_salary + Dist_nearest,
+          data = br_data)
+
+summary(reg1)
+
+stargazer(reg, reg1, type = "text")
+
+
+
 
 # Regression model with intraction terms
 reg_int <- lm(as.numeric(Number_of_stores) ~ log_s + Dist_nearest + log_s : Dist_nearest,
@@ -92,7 +102,7 @@ summary(reg_int)
 library(MASS)
 
 # Model 1: Bresnahan & Reiss
-model_1 <- polr(Number_of_stores ~ log_s, data = br_data, method = "probit")
+model_1 <- polr(Number_of_stores ~ s, data = br_data, method = "probit")
 
 summary(model_1)
 
@@ -119,28 +129,33 @@ names(ETR_N1) <- elab1
 S_N1
 ETR_N1
 
+# Display the results in a table
 kable(S_N1, col.names = c("'000s"), digits = 4,
       caption = 'Entry thresholds',
+      booktabs = TRUE)
+
+# Optionally, display the ETR_N3 in a table as well
+kable(ETR_N1, col.names = c("ETR"), digits = 4,
+      caption = 'Entry Threshold Ratios',
       booktabs = TRUE)
 
 
 
 
 
-
-## Model 2
-# Fit the model with two predictors
-model_2 <- polr(Number_of_stores ~ s + Dist_nearest, data = br_data, method = "probit")
+# Fit the model with one predictor
+model_2 <- polr(Number_of_stores ~ log_s, data = br_data, method = "probit")
 
 # Display the summary of the model
 summary(model_2)
 
 # Extract coefficients and cutoffs
-lambda2 <- model_2$coefficients # Estimates for s and density
+lambda2 <- model_2$coefficients # Estimate for log_s
 theta2 <- model_2$zeta # Cutoffs
 
-# Compute S_N using the new predictors
-S_N2 <- exp(theta2 - mean(br_data$Dist_nearest) * lambda2["Dist_nearest"])
+# Compute S_N using the predictor log_s
+# Since there's only one predictor, use its mean directly
+S_N2 <- exp(theta2 - mean(br_data$log_s) * lambda2["log_s"])
 
 # Create labels for S_N
 upperb2 <- length(theta2) # Number of thresholds
@@ -159,14 +174,14 @@ S_N2
 ETR_N2
 
 # Display the results in a table
-kable(S_N2, col.names = c("'000s"), digits = 4,
-      caption = 'Entry thresholds',
-      booktabs = TRUE)
+knitr::kable(S_N2, col.names = c("'000s"), digits = 4,
+             caption = 'Entry thresholds for Model 2',
+             booktabs = TRUE)
 
-# Display the frequency table of the Number_of_stores variable
-table(br_data$Number_of_stores)
-
-
+# Optionally, display the ETR_N2 in a table as well
+knitr::kable(ETR_N2, col.names = c("ETR"), digits = 4,
+             caption = 'Entry Threshold Ratios for Model 2',
+             booktabs = TRUE)
 
 
 ## Model 3
