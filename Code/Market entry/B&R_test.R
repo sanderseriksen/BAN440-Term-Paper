@@ -22,7 +22,7 @@ rho <- cor(Vinmonopolet_market$Population, Vinmonopolet_market$Number_of_stores)
 
 # Filtering data for B&R
 br_data <- Vinmonopolet_market %>%
-  filter(Population < 150000 & Area > 0 & Population > 0)
+  filter(Population < 100000 & Area > 0 & Population > 0)
 
 # Adding variables to the data
 upperb <- 3
@@ -242,11 +242,44 @@ model_4 <- polr(Number_of_stores ~ log_s + Monthly_salary + Grensehandel + n_sta
 ## Model 5
 
 # Fit the model with the specified predictors
-model_5 <- polr(Number_of_stores ~ log_s + Monthly_salary + Grensehandel,
-                data = br_data, method = "probit")
+model_5 <- polr(Number_of_stores ~ log_s + n_stays, data = br_data, method = "probit")
 
 # Display the summary of the model
 summary(model_5)
+
+# Extract coefficients and cutoffs
+lambda5 <- model_5$coefficients # Estimates for log_s and Area
+theta5 <- model_5$zeta # Cutoffs
+
+# Compute S_N using the sample means of the predictors
+X_bar5 <- colMeans(br_data[, c("log_s", "n_stays")])
+S_N5 <- exp(theta5 - X_bar5 %*% lambda5)
+
+# Create labels for S_N
+upperb5 <- length(theta5) # Number of thresholds
+slab5 <- paste0("$S_", 1:upperb5, "$")
+names(S_N5) <- slab5
+
+# Compute ETR_N using the cutoffs
+ETR_N5 <- exp(theta5[2:upperb5] - theta5[1:(upperb5-1)]) * (1:(upperb5-1)) / (2:upperb5)
+
+# Create labels for ETR_N
+elab5 <- paste0("$s_", 2:upperb5, "/s_", 1:(upperb5-1), "$")
+names(ETR_N5) <- elab5
+
+# Print results
+S_N5
+ETR_N5
+
+# Display the results in a table
+knitr::kable(S_N5, col.names = c("'000s"), digits = 4,
+             caption = 'Entry thresholds for Model 5',
+             booktabs = TRUE)
+
+# Optionally, display the ETR_N5 in a table as well
+knitr::kable(ETR_N5, col.names = c("ETR"), digits = 4,
+             caption = 'Entry Threshold Ratios for Model 5',
+             booktabs = TRUE)
 
 
 

@@ -26,22 +26,22 @@ Vinmonopolet <- read_excel("final_data_mun_dist.xlsx") %>%
       Region_Name == "VESTFOLD" ~ "Vestfold",
       Region_Name == "FINNMARK" ~ "Finnmark",
       Region_Name == "HEDMARK" ~ "Innlandet",
-      Region_Name == "MØRE OG ROMSDAL" ~ "Møre og Romsdal",
+      Region_Name == "MCRE OG ROMSDAL" ~ "MC8re og Romsdal",
       Region_Name == "NORDLAND" ~ "Nordland",
       Region_Name == "OSLO" ~ "Oslo",
       Region_Name == "ROGALAND" ~ "Rogaland",
       Region_Name == "TELEMARK" ~ "Telemark",
       Region_Name == "TROMS" ~ "Troms",
-      Region_Name == "SØR-TRØNDELAG" ~ "Trøndelag",
-      Region_Name == "NORD-TRØNDELAG" ~ "Trøndelag",
+      Region_Name == "SCR-TRCNDELAG" ~ "TrC8ndelag",
+      Region_Name == "NORD-TRCNDELAG" ~ "TrC8ndelag",
       Region_Name == "SOGN OG FJORDANE" ~ "Vestland",
       Region_Name == "HORDALAND" ~ "Vestland",
-      Region_Name == "ØSTFOLD" ~ "Østfold",
+      Region_Name == "CSTFOLD" ~ "Cstfold",
       is.na(Region_Name) & str_starts(Municipality_Code, "03") ~ "Oslo",
       is.na(Region_Name) & str_starts(Municipality_Code, "11") ~ "Rogaland",
-      is.na(Region_Name) & str_starts(Municipality_Code, "15") ~ "Møre og Romsdal",
+      is.na(Region_Name) & str_starts(Municipality_Code, "15") ~ "MC8re og Romsdal",
       is.na(Region_Name) & str_starts(Municipality_Code, "18") ~ "Nordland",
-      is.na(Region_Name) & str_starts(Municipality_Code, "31") ~ "Østfold",
+      is.na(Region_Name) & str_starts(Municipality_Code, "31") ~ "Cstfold",
       is.na(Region_Name) & str_starts(Municipality_Code, "32") ~ "Akershus",
       is.na(Region_Name) & str_starts(Municipality_Code, "33") ~ "Buskerud",
       is.na(Region_Name) & str_starts(Municipality_Code, "34") ~ "Innlandet",
@@ -49,7 +49,7 @@ Vinmonopolet <- read_excel("final_data_mun_dist.xlsx") %>%
       is.na(Region_Name) & str_starts(Municipality_Code, "40") ~ "Telemark",
       is.na(Region_Name) & str_starts(Municipality_Code, "42") ~ "Agder",
       is.na(Region_Name) & str_starts(Municipality_Code, "46") ~ "Vestland",
-      is.na(Region_Name) & str_starts(Municipality_Code, "50") ~ "Trøndelag",
+      is.na(Region_Name) & str_starts(Municipality_Code, "50") ~ "TrC8ndelag",
       is.na(Region_Name) & str_starts(Municipality_Code, "55") ~ "Troms",
       is.na(Region_Name) & str_starts(Municipality_Code, "56") ~ "Finnmark",
       TRUE ~ Region_Name  # Keep existing Region_Name if no conditions are met
@@ -103,22 +103,22 @@ regional <- regional %>%
     Grensehandel = Total_sale * weight_grensehandel
   )
 
-# Split the "Vestlandet" region row into three new rows: "Rogaland", "Vestland" and "Møre og Romsdal"
+# Split the "Vestlandet" region row into three new rows: "Rogaland", "Vestland" and "MC8re og Romsdal"
 regional <- regional %>%
   rbind(
     regional %>% filter(Region == "Vestlandet") %>% mutate(Region = "Rogaland"),
     regional %>% filter(Region == "Vestlandet") %>% mutate(Region = "Vestland"),
-    regional %>% filter(Region == "Vestlandet") %>% mutate(Region = "Møre og Romsdal")
+    regional %>% filter(Region == "Vestlandet") %>% mutate(Region = "MC8re og Romsdal")
   ) %>%
   filter(Region != "Vestlandet")
 
-# Divide the grensehandel value by three for "Rogaland", "Vestland" and "Møre og Romsdal"
+# Divide the grensehandel value by three for "Rogaland", "Vestland" and "MC8re og Romsdal"
 regional <- regional %>%
   mutate(
     Grensehandel = case_when(
       Region == "Rogaland" ~ Grensehandel * 0.35,
       Region == "Vestland" ~ Grensehandel * 0.46,
-      Region == "Møre og Romsdal" ~ Grensehandel * 0.19,
+      Region == "MC8re og Romsdal" ~ Grensehandel * 0.19,
       TRUE ~ Grensehandel  # Keep the original value for other regions
     )
   )
@@ -225,7 +225,7 @@ clean_data <- clean_data %>%
   slice(1:(n() - 2)) %>%
   select(-'...2') %>% 
   rename(
-    Mun = `12852: Kommunefordelt månedslønn, etter region, statistikkmål, statistikkvariabel, år og arbeidssted/bosted`,
+    Mun = `12852: Kommunefordelt mC%nedslC8nn, etter region, statistikkmC%l, statistikkvariabel, C%r og arbeidssted/bosted`,
     Monthly_salary = '...3'
   ) %>% 
   separate(Mun, into = c("Municipality_Code", "Municipality_Name"), sep = " ", remove = FALSE) %>% 
@@ -235,8 +235,32 @@ clean_data <- clean_data %>%
 # Merge with the main data set
 Vinmonopolet_market <- left_join(Vinmonopolet_market, clean_data, by = "Municipality_Code")
 
+
+
+
+
+## Merge 4: Concentration ######################################################
+
+# Load data
+concentration <- read_excel("Concentration.xlsx", skip = 5) %>% 
+  slice(1:357) %>% 
+  select('...1',
+         'Spredtbygd str??k...6') %>%
+  rename(Mun = '...1',
+         prop_spread = 'Spredtbygd str??k...6') %>% 
+  separate(Mun, into = c("Municipality_Code", "Municipality_Name"), sep = " ", remove = FALSE) %>% 
+  select(-c("Municipality_Name", "Mun")) %>% 
+  mutate(prop_spread = as.numeric(prop_spread))
+
+# Remove the first two characters of each cell in the "Municpality_Code" column
+concentration$Municipality_Code <- substr(concentration$Municipality_Code, 3, nchar(concentration$Municipality_Code))
+
+# Merge with the main data set
+Vinmonopolet_market <- left_join(Vinmonopolet_market, concentration, by = "Municipality_Code")
+
 # Write to Excel
 write_xlsx(Vinmonopolet_market, "B&R_data.xlsx")
+
 
 ## Some model testing #########################################################
 
