@@ -22,7 +22,7 @@ rho <- cor(Vinmonopolet_market$Population, Vinmonopolet_market$Number_of_stores)
 
 # Filtering data for B&R
 br_data <- Vinmonopolet_market %>%
-  filter(Population < 100000 & Area > 0 & Population > 0)
+  filter(Population < 150000 & Area > 0 & Population > 0)
 
 # Adding variables to the data
 upperb <- 3
@@ -39,10 +39,10 @@ br_data <- br_data %>%
 
 # Scale the numeric variables
 br_data <- br_data %>% 
-  mutate_at(vars(Population, s, log_s, Area, Grensehandel, n_stays, Monthly_salary, Dist_nearest), scale)
+  mutate_at(vars(Population, s, log_s, Area, Grensehandel, n_stays, Monthly_salary, Dist_nearest, prop_spread), scale)
 
 # Correlation matrix
-cor(br_data[, c("s", "log_s", "Area", "Grensehandel", "n_stays", "Monthly_salary", "Dist_nearest")])
+cor(br_data[, c("s", "log_s", "Area", "Grensehandel", "n_stays", "Monthly_salary", "Dist_nearest", "prop_spread")])
 
 
 
