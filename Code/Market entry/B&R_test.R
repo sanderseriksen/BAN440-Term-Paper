@@ -71,12 +71,12 @@ Vinmonopolet_market %>%
 ## Linear regression model #####################################################
 
 # Regression model to test
-reg <- lm(as.numeric(Number_of_stores) ~ Population + Area + Grensehandel + n_stays + Monthly_salary + Dist_nearest,
+reg <- lm(as.numeric(Number_of_stores) ~ Population + Area + Grensehandel + n_stays + Monthly_salary + Dist_nearest + prop_spread,
           data = Vinmonopolet_market)
 
 summary(reg)
 
-reg1 <- lm(as.numeric(Number_of_stores) ~ Population + Area + Grensehandel + n_stays + Monthly_salary + Dist_nearest,
+reg1 <- lm(as.numeric(Number_of_stores) ~ Population + Area + Grensehandel + n_stays + Monthly_salary + Dist_nearest + prop_spread,
           data = br_data)
 
 summary(reg1)
@@ -286,7 +286,7 @@ knitr::kable(ETR_N5, col.names = c("ETR"), digits = 4,
 ## Model 6
 
 # Fit the model with the specified predictors
-model_6 <- polr(Number_of_stores ~ log_s + log(Dist_nearest) + Grensehandel + n_stays + Monthly_salary,
+model_6 <- polr(Number_of_stores ~ log_s + Grensehandel + n_stays + Monthly_salary + prop_spread,
                 data = br_data, method = "probit")
 
 summary(model_6)
@@ -296,7 +296,7 @@ lambda6 <- model_6$coefficients # Estimates for log_s, log(Dist_nearest), Grense
 theta6 <- model_6$zeta # Cutoffs
 
 # Compute S_N using the sample means of all predictors
-X_bar6 <- colMeans(br_data[, c("log_s", "Dist_nearest", "Grensehandel", "n_stays", "Monthly_salary")])
+X_bar6 <- colMeans(br_data[, c("log_s", "Grensehandel", "n_stays", "Monthly_salary", "prop_spread")])
 S_N6 <- exp(theta6 - X_bar6 %*% lambda6)
 
 # Create labels for S_N
@@ -325,7 +325,41 @@ knitr::kable(ETR_N6, col.names = c("ETR"), digits = 4,
 ## Model 7
 
 # Fit the model with the specified predictors
-model_7 <- polr(Number_of_stores ~ log_s + n_stays,
-                data = br_data, method = "probit")
+model_7 <- polr(Number_of_stores ~ log_s + Grensehandel, data = br_data, method = "probit")
 
+# Display the summary of the model
 summary(model_7)
+
+# Extract coefficients and cutoffs
+lambda7 <- model_7$coefficients # Estimates for log_s and prop_spread
+theta7 <- model_7$zeta # Cutoffs
+
+# Compute S_N using the sample means of the predictors
+X_bar7 <- colMeans(br_data[, c("log_s", "Grensehandel")])
+S_N7 <- exp(theta7 - X_bar7 %*% lambda7)
+
+# Create labels for S_N
+upperb7 <- length(theta7) # Number of thresholds
+slab7 <- paste0("$S_", 1:upperb7, "$")
+names(S_N7) <- slab7
+
+# Compute ETR_N using the cutoffs
+ETR_N7 <- exp(theta7[2:upperb7] - theta7[1:(upperb7-1)]) * (1:(upperb7-1)) / (2:upperb7)
+
+# Create labels for ETR_N
+elab7 <- paste0("$s_", 2:upperb7, "/s_", 1:(upperb7-1), "$")
+names(ETR_N7) <- elab7
+
+# Print results
+S_N7
+ETR_N7
+
+# Display the results in a table
+knitr::kable(S_N7, col.names = c("'000s"), digits = 4,
+             caption = 'Entry thresholds for Model 7',
+             booktabs = TRUE)
+
+# Optionally, display the ETR_N7 in a table as well
+knitr::kable(ETR_N7, col.names = c("ETR"), digits = 4,
+             caption = 'Entry Threshold Ratios for Model 7',
+             booktabs = TRUE)
