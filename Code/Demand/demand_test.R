@@ -74,23 +74,25 @@ merged_data <- Vinmonopolet_market %>%
   left_join(test_data, by = "Municipality_Code") %>%
   mutate(Sales = ifelse(Sales == 0, Sales_pred, Sales)) %>%
   select(-Sales_pred) %>% 
-  mutate(Sales = ifelse(Sales < 0, 0, Sales))
+  mutate(Sales = ifelse(Sales < 0, 0, Sales),
+         Number_of_stores = as.integer(Number_of_stores)) %>% 
+  filter(Number_of_stores < 2)
 
 
 
 ## Logit regression ############################################################
 
 # Logit model for probability of having a store, for "demand_data"
-logit <- glm(Number_of_stores ~ Population + Grensehandel + n_stays + Monthly_salary,
-             data = demand_data, family = binomial)
+logit <- glm(Number_of_stores ~ Sales,
+             data = merged_data, family = binomial)
 
 summary(logit)
 
 # Checking model accuracy
-pred <- predict(logit, newdata = demand_data, type = "response")
+pred <- predict(logit, newdata = merged_data, type = "response")
 
 # Add the predicted probabilities to the data
-demand_data$prob <- pred
+merged_data$prob <- pred
 
 
 
