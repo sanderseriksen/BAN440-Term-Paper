@@ -17,12 +17,12 @@ Vinmonopolet_market <- read_excel("B&R_data.xlsx")
 rho <- cor(Vinmonopolet_market$Population, Vinmonopolet_market$Number_of_stores)
 
 
-
 ## Data preparation ############################################################
 
 # Filtering data for B&R
 br_data <- Vinmonopolet_market %>%
   filter(Population < 150000 & Area > 0 & Population > 0)
+
 
 # Adding variables to the data
 upperb <- 3
