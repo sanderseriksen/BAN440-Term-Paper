@@ -37,9 +37,17 @@ br_data <- br_data %>%
   dummy_cols(select_columns = "Number_of_stores") %>% 
   mutate_at(vars(starts_with("Number_of_stores")), as.factor)
 
+
+# Regression before scaling to compare the constricted data
+reg1 <- lm(as.numeric(Number_of_stores) ~ Population + Area + Grensehandel + n_stays + Monthly_salary + Dist_nearest + prop_spread,
+           data = br_data)
+
+summary(reg1)
+
+
 # Scale the numeric variables
-br_data <- br_data %>% 
-  mutate_at(vars(Population, s, log_s, Area, Grensehandel, n_stays, Monthly_salary, Dist_nearest, prop_spread), scale)
+#br_data <- br_data %>% 
+#  mutate_at(vars(Population, s, log_s, Area, Grensehandel, n_stays, Monthly_salary, Dist_nearest, prop_spread), scale)
 
 # Correlation matrix
 cor(br_data[, c("s", "log_s", "Area", "Grensehandel", "n_stays", "Monthly_salary", "Dist_nearest", "prop_spread")])
@@ -76,10 +84,6 @@ reg <- lm(as.numeric(Number_of_stores) ~ Population + Area + Grensehandel + n_st
 
 summary(reg)
 
-reg1 <- lm(as.numeric(Number_of_stores) ~ Population + Area + Grensehandel + n_stays + Monthly_salary + Dist_nearest + prop_spread,
-          data = br_data)
-
-summary(reg1)
 
 stargazer(reg, reg1, type = "text")
 
@@ -91,6 +95,13 @@ reg_int <- lm(as.numeric(Number_of_stores) ~ log_s + Dist_nearest + log_s : Dist
               data = br_data)
 
 summary(reg_int)
+
+
+
+table(Vinmonopolet_market$Number_of_stores)
+
+# Histogram of population in the different municipalities below a population of 150 000. Use the "vinmonopolet_market" data
+hist(br_data$Population, breaks = 200, col = "lightblue", main = "Population distribution", xlab = "Population")
 
 
 ### Fitting models #############################################################
@@ -187,7 +198,7 @@ knitr::kable(ETR_N2, col.names = c("ETR"), digits = 4,
 ## Model 3
 
 # Fit the model with the specified predictors
-model_3 <- polr(Number_of_stores ~ log_s + Monthly_salary + Grensehandel + n_stays,
+model_3 <- polr(Number_of_stores ~ log_s + prop_spread + Grensehandel + n_stays,
                 data = br_data, method = "probit")
 
 # Display the summary of the model
@@ -198,7 +209,7 @@ lambda3 <- model_3$coefficients # Estimates for log_s, Monthly_salary, Grensehan
 theta3 <- model_3$zeta # Cutoffs
 
 # Compute S_N using the sample means of all predictors
-X_bar3 <- colMeans(br_data[, c("log_s", "Monthly_salary", "Grensehandel", "n_stays")])
+X_bar3 <- colMeans(br_data[, c("log_s", "prop_spread", "Grensehandel", "n_stays")])
 S_N3 <- exp(theta3 - X_bar3 %*% lambda3)
 
 # Create labels for S_N
