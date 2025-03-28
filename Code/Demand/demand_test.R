@@ -48,6 +48,10 @@ backward_model <- step(lm(Sales ~ Population + Grensehandel + n_stays + Monthly_
 summary(backward_model)
 
 
+lm_Area <- lm(Sales ~ Area, data = train_data)
+
+summary(lm_Area)
+
 
 # Linear regression model for predicting sales with all the variables
 var_test <- lm(Sales ~ Population + Grensehandel + n_stays + Monthly_salary + Area +
