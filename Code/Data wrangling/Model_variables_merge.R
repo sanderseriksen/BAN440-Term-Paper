@@ -72,6 +72,12 @@ Vinmonopolet_market <- Vinmonopolet %>%
     Dist_nearest = first(dist_nearest_store),
   )
 
+
+# Scaling the variables that have nt been scaled yet
+Vinmonopolet_market <- Vinmonopolet_market %>%
+  mutate(Population = Population / 1000,
+         Sales = Sales / 1000)
+
 # Now we have loaded and wrangled the main data set, but we can use some
 # new variables for our analysis
 
@@ -185,12 +191,10 @@ Vinmonopolet_market <- Vinmonopolet_market %>%
   ungroup()
 
 Vinmonopolet_market <- Vinmonopolet_market %>%
-  mutate(Grensehandel = 1000 * Grensehandel,
-         Kommune_share = Population / Region_pop,
-         Grensehandel_mun = Grensehandel * Kommune_share,
-         Grensehandel_cap = Grensehandel_mun / Population) %>% 
-  select(-c("Region_pop", "Kommune_share", "Grensehandel_mun", "Grensehandel")) %>% 
-  rename(Grensehandel = Grensehandel_cap)
+  mutate(Kommune_share = Population / Region_pop,
+         Grensehandel_mun = Grensehandel * Kommune_share) %>% 
+  select(-c("Region_pop", "Kommune_share", "Grensehandel")) %>% 
+  rename(Grensehandel = Grensehandel_mun)
 
 
 

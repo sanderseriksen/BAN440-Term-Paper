@@ -11,7 +11,7 @@ library(stargazer)
 Sys.setlocale("LC_ALL", "en_US.UTF-8")
 
 # Load data
-Vinmonopolet_market <- read_excel("B&R_data.xlsx")
+Vinmonopolet_market <- read_excel("demand_data.xlsx")
 
 ### Data preparation ###########################################################
 
@@ -20,7 +20,7 @@ Vinmonopolet_market <- read_excel("B&R_data.xlsx")
 
 # Filter out the largest cities
 demand_data <- Vinmonopolet_market %>%
-  filter(Population < 150000) %>% 
+  filter(Population < 150) %>% 
   mutate(Number_of_stores = as.factor(Number_of_stores))
 
 # Train and test split, training data all observations with a store
@@ -35,13 +35,13 @@ test_data <- Vinmonopolet_market %>%
 
 # Forward selection
 forward_model <- step(lm(Sales ~ 1, data = train_data), 
-                      scope = ~ Population + Grensehandel + n_stays + Monthly_salary + Area + Number_of_stores + prop_spread,
+                      scope = ~ Population + Grensehandel + n_stays + Monthly_salary + Area + Number_of_stores + Spread,
                       direction = "forward")
 
 summary(forward_model)
 
 # Backward selection
-backward_model <- step(lm(Sales ~ Population + Grensehandel + n_stays + Monthly_salary + Area + Number_of_stores + prop_spread, 
+backward_model <- step(lm(Sales ~ Population + Grensehandel + n_stays + Monthly_salary + Area + Number_of_stores + Spread, 
                           data = train_data), 
                        direction = "backward")
 
@@ -51,11 +51,11 @@ summary(backward_model)
 
 # Linear regression model for predicting sales with all the variables
 var_test <- lm(Sales ~ Population + Grensehandel + n_stays + Monthly_salary + Area +
-            Number_of_stores + prop_spread,
+            Number_of_stores + Spread,
           data = Vinmonopolet_market)
 
 var_test1 <- lm(Sales ~ Population + Grensehandel + n_stays + Monthly_salary + Area +
-                 Number_of_stores + prop_spread,
+                 Number_of_stores + Spread,
                data = demand_data)
 
 stargazer(var_test, var_test1, type = "text")
@@ -114,7 +114,7 @@ predicted_data$prob <- pred
 # more than 15 on "dist_to_nearest_store". Arrange descending by "prob"
 predicted_data %>%
   filter(Number_of_stores == 0,
-         Dist_nearest > 10) %>% 
+         Dist_nearest > 15) %>% 
   arrange(desc(prob)) %>%
   select(Mun_name, prob, Dist_nearest, Sales, Population, Region_Name)
 
