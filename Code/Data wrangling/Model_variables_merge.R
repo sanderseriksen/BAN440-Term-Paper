@@ -57,7 +57,7 @@ Vinmonopolet <- read_excel("final_data_mun_dist.xlsx") %>%
   ) %>% 
   select(-Mun_name)
 
-# Aggregating per market data for the Bresnahan & Reiss model
+# Aggregating per municipality data
 Vinmonopolet_market <- Vinmonopolet %>%
   group_by(Municipality_Code) %>%
   summarise(
@@ -72,9 +72,8 @@ Vinmonopolet_market <- Vinmonopolet %>%
     Dist_nearest = first(dist_nearest_store),
   )
 
-
-# Now we have loaded the main data set that we thus far have used for estimating a model
-# We saw the need for more data to be able to estimate the Bresnahan & Reiss model
+# Now we have loaded and wrangled the main data set, but we can use some
+# new variables for our analysis
 
 ## Merge 1: Grensehandel ######################################################
 
@@ -179,6 +178,20 @@ regional <- regional %>% select(-Total_sale)
 # Merge the regional data with the main data set on Region_Name in the Vinmonopolet_market data set and Region in the regional data set
 Vinmonopolet_market <- left_join(Vinmonopolet_market, regional, by = c("Region_Name" = "Region"))
 
+# Add a new column "Region_pop" where "Population" is summarized for each region
+Vinmonopolet_market <- Vinmonopolet_market %>%
+  group_by(Region_Name) %>%
+  mutate(Region_pop = sum(Population)) %>%
+  ungroup()
+
+Vinmonopolet_market <- Vinmonopolet_market %>%
+  mutate(Grensehandel = 1000 * Grensehandel,
+         Kommune_share = Population / Region_pop,
+         Grensehandel_mun = Grensehandel * Kommune_share,
+         Grensehandel_cap = Grensehandel_mun / Population) %>% 
+  select(-c("Region_pop", "Kommune_share", "Grensehandel_mun", "Grensehandel")) %>% 
+  rename(Grensehandel = Grensehandel_cap)
+
 
 
 
@@ -201,7 +214,8 @@ Tourism <- read_excel("Tourism.xlsx", skip = 4) %>%
 # Merging the data
 Vinmonopolet_market <- left_join(Vinmonopolet_market, Tourism, by = "Municipality_Code") %>% 
   mutate(
-    n_stays = ifelse(is.na(n_stays), 0, n_stays)
+    n_stays = ifelse(is.na(n_stays), 0, n_stays),
+    n_stays = n_stays / 1000
   )
 
 # There is a great deal of missing data, so we do not know the relevance of 
@@ -230,7 +244,8 @@ clean_data <- clean_data %>%
   ) %>% 
   separate(Mun, into = c("Municipality_Code", "Municipality_Name"), sep = " ", remove = FALSE) %>% 
   select(-c("Municipality_Name", "Mun")) %>%
-  mutate(Monthly_salary = as.numeric(Monthly_salary))
+  mutate(Monthly_salary = as.numeric(Monthly_salary),
+         Monthly_salary = Monthly_salary / 1000)
 
 # Merge with the main data set
 Vinmonopolet_market <- left_join(Vinmonopolet_market, clean_data, by = "Municipality_Code")
@@ -245,12 +260,13 @@ Vinmonopolet_market <- left_join(Vinmonopolet_market, clean_data, by = "Municipa
 concentration <- read_excel("Concentration.xlsx", skip = 5) %>% 
   slice(1:357) %>% 
   select('...1',
-         'Spredtbygd strøk...6') %>%
+         'Spredtbygd strøk...3') %>%
   rename(Mun = '...1',
-         prop_spread = 'Spredtbygd strøk...6') %>% 
+         Spread = 'Spredtbygd strøk...3') %>% 
   separate(Mun, into = c("Municipality_Code", "Municipality_Name"), sep = " ", remove = FALSE) %>% 
   select(-c("Municipality_Name", "Mun")) %>% 
-  mutate(prop_spread = as.numeric(prop_spread))
+  mutate(Spread = as.numeric(Spread),
+         Spread = Spread / 1000)
 
 # Remove the first two characters of each cell in the "Municpality_Code" column
 concentration$Municipality_Code <- substr(concentration$Municipality_Code, 3, nchar(concentration$Municipality_Code))
@@ -258,83 +274,8 @@ concentration$Municipality_Code <- substr(concentration$Municipality_Code, 3, nc
 # Merge with the main data set
 Vinmonopolet_market <- left_join(Vinmonopolet_market, concentration, by = "Municipality_Code")
 
+
+
 # Write to Excel
-write_xlsx(Vinmonopolet_market, "B&R_data.xlsx")
-
-
-## Some model testing #########################################################
-
-# Filtering data for B&R
-br_data <- Vinmonopolet_market %>%
-  filter(Population < 150000 & Area > 0 & Population > 1000)
-
-# Adding variables to the data
-upperb <- 3
-
-br_data <- br_data %>% 
-  mutate(
-    s = Population / 1000,
-    log_s = log(s),
-    density = Number_of_stores / Area,
-    Number_of_stores = as.factor(ifelse(Number_of_stores <= upperb, Number_of_stores, upperb))
-  ) %>% 
-  dummy_cols(select_columns = "Number_of_stores") %>% 
-  mutate_at(vars(starts_with("Number_of_stores")), as.factor)
-
-# Scale the numeric variables
-br_data <- br_data %>% 
-  mutate_at(vars(Population, s, log_s, Area, Grensehandel, n_stays, Monthly_salary, Dist_nearest), scale)
-
-# Table of the number of stores per market
-table(br_data$Number_of_stores)
-
-# Regression model to test
-reg <- lm(as.numeric(Number_of_stores) ~ Population + Area + Grensehandel + n_stays + Monthly_salary + Dist_nearest, Vinmonopolet_market)
-
-summary(reg)
-
-# Fitting the Bresnahan & Reiss model
-library(MASS)
-
-model_1 <- polr(Number_of_stores ~ s + Dist_nearest, data = br_data, method = "probit")
-
-summary(model_1)
-
-
-model_2 <- polr(Number_of_stores ~ s + Dist_nearest,
-                data = br_data, method = "probit")
-
-summary(model_2)
-
-## Model 2 ##
-
-# Extract coefficients and cutoffs
-lambda <- model_2$coefficients  # Estimates for s and density
-theta <- model_2$zeta  # Cutoffs
-
-# Compute S_N using the new predictors
-S_N <- exp(theta - mean(br_data$Dist_nearest) * lambda["Dist_nearest"])
-
-# Create labels for S_N
-upperb <- length(theta)  # Number of thresholds
-slab <- paste0("$S_", 1:upperb, "$")
-names(S_N) <- slab
-
-# Compute ETR_N using the cutoffs
-ETR_N <- exp(theta[2:upperb] - theta[1:(upperb-1)]) * (1:(upperb-1)) / (2:upperb)
-
-# Create labels for ETR_N
-elab <- paste0("$s_", 2:upperb, "/s_", 1:(upperb-1), "$")
-names(ETR_N) <- elab
-
-# Print results
-S_N
-ETR_N
-
-kable(S_N, col.names = c("'000s"), digits = 4,
-      caption = 'Entry thresholds',
-      booktabs = TRUE)
-
-table(br_data$Number_of_stores)
-
+write_xlsx(Vinmonopolet_market, "demand_data.xlsx")
 

@@ -31,13 +31,22 @@ train_data <- Vinmonopolet_market %>%
 test_data <- Vinmonopolet_market %>%
   filter(Number_of_stores == 0)
 
-### Demand estimation ##########################################################
+### Model selection ###########################################################
 
-# Checking the correlation between the variables.
-# Correlation matrix with Sales, Population, Grensehandel, n_stays, Monthly_salary, Area, Number_of_stores, prop_spread
-cor_matrix <-
-cor(Vinmonopolet_market[c("Sales", "Population", "Grensehandel", "n_stays",
-                   "Monthly_salary", "Area", "Number_of_stores", "prop_spread")])
+# Forward selection
+forward_model <- step(lm(Sales ~ 1, data = train_data), 
+                      scope = ~ Population + Grensehandel + n_stays + Monthly_salary + Area + Number_of_stores + prop_spread,
+                      direction = "forward")
+
+summary(forward_model)
+
+# Backward selection
+backward_model <- step(lm(Sales ~ Population + Grensehandel + n_stays + Monthly_salary + Area + Number_of_stores + prop_spread, 
+                          data = train_data), 
+                       direction = "backward")
+
+summary(backward_model)
+
 
 
 # Linear regression model for predicting sales with all the variables
@@ -53,6 +62,10 @@ stargazer(var_test, var_test1, type = "text")
 
 # From these regressions we see that we want to remove the "Area" and "prop_spread" variables
 # from the regressions as they are not significant.
+
+
+
+### Demand estimation ##########################################################
 
 ## Linear regression
 
