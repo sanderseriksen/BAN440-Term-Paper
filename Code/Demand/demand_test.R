@@ -13,64 +13,67 @@ Sys.setlocale("LC_ALL", "en_US.UTF-8")
 # Load data
 Vinmonopolet_market <- read_excel("B&R_data.xlsx")
 
-# Calculate rho, the raw correlation between Population and number of stores
-rho <- cor(Vinmonopolet_market$Population, Vinmonopolet_market$Number_of_stores)
+### Data preparation ###########################################################
 
+# Narrowing down the data to only contain relevant markets
+# Excluding the largest cities because they are not representative
 
-## Data preparation ############################################################
-
-# Filtering data to only contatin 0 or 1 stores
+# Filter out the largest cities
 demand_data <- Vinmonopolet_market %>%
-  filter(Number_of_stores < 2) %>% 
-  mutate(Number_of_stores = as.integer(Number_of_stores))
-
-demand_data2 <- Vinmonopolet_market %>%
-  filter(Number_of_stores < 5) %>% 
+  filter(Population < 150000) %>% 
   mutate(Number_of_stores = as.factor(Number_of_stores))
-
-demand_data3 <- Vinmonopolet_market %>%
-  filter(Number_of_stores < 5) %>% 
-  mutate(Sales_per_store = Sales / Number_of_stores,
-         Number_of_stores = as.factor(Number_of_stores))
-
-## Regression analysis #########################################################
 
 # Train and test split, training data all observations with a store
-train_data <- demand_data %>%
-  filter(Number_of_stores == 1)
+train_data <- Vinmonopolet_market %>%
+  filter(Number_of_stores > 0)
 
 # Test data all observations without a store
-test_data <- demand_data %>%
-  filter(Number_of_stores == 0) %>% 
-  mutate(Number_of_stores = as.factor(Number_of_stores))
+test_data <- Vinmonopolet_market %>%
+  filter(Number_of_stores == 0)
 
-# Regression where Sale is estimated
-reg <- lm(Sales ~ Population + Area + Grensehandel + n_stays + Monthly_salary + prop_spread,
-          data = train_data)
+### Demand estimation ##########################################################
 
-summary(reg)
+# Checking the correlation between the variables.
+# Correlation matrix with Sales, Population, Grensehandel, n_stays, Monthly_salary, Area, Number_of_stores, prop_spread
+cor_matrix <-
+cor(Vinmonopolet_market[c("Sales", "Population", "Grensehandel", "n_stays",
+                   "Monthly_salary", "Area", "Number_of_stores", "prop_spread")])
 
-# Predict the sales for all of the data
+
+# Linear regression model for predicting sales with all the variables
+var_test <- lm(Sales ~ Population + Grensehandel + n_stays + Monthly_salary + Area +
+            Number_of_stores + prop_spread,
+          data = Vinmonopolet_market)
+
+var_test1 <- lm(Sales ~ Population + Grensehandel + n_stays + Monthly_salary + Area +
+                 Number_of_stores + prop_spread,
+               data = demand_data)
+
+stargazer(var_test, var_test1, type = "text")
+
+# From these regressions we see that we want to remove the "Area" and "prop_spread" variables
+# from the regressions as they are not significant.
+
+## Linear regression
+
+# Predicting sales using the training data
 reg1 <- lm(Sales ~ Population + Grensehandel + n_stays + Monthly_salary,
-           data = demand_data2)
+           data = train_data)
 
 summary(reg1)
 
 
-# Test the model on the test data
+# Applying the model on the test data
 test_data$Sales_pred <- predict(reg1, newdata = test_data)
 
-# Calculate the mean absolute error
-MAE <- mean(abs(test_data$Sales_pred - test_data$Sales))
+## Merge predicted data into the original data
 
-# Merge predicted data into the original data
-
-# Deselect unnecessary columns
+# Deselect unnecessary columns to merge the data easier
 test_data <- test_data %>%
   select(Municipality_Code, Sales_pred)
 
 # Merge the data frames
-merged_data <- Vinmonopolet_market %>%
+predicted_data <- Vinmonopolet_market %>%
   left_join(test_data, by = "Municipality_Code") %>%
   mutate(Sales = ifelse(Sales == 0, Sales_pred, Sales)) %>%
   select(-Sales_pred) %>% 
@@ -82,17 +85,17 @@ merged_data <- Vinmonopolet_market %>%
 
 ## Logit regression ############################################################
 
-# Logit model for probability of having a store, for "demand_data"
-logit <- glm(Number_of_stores ~ Sales,
-             data = merged_data, family = binomial)
+# Logit model for probability of having a store, for "demand_data" using Sales
+logit <- glm(Number_of_stores ~ Sales + Population + Grensehandel + n_stays + Monthly_salary,
+             data = predicted_data, family = binomial)
 
 summary(logit)
 
 # Checking model accuracy
-pred <- predict(logit, newdata = merged_data, type = "response")
+pred <- predict(logit, newdata = predicted_data, type = "response")
 
 # Add the predicted probabilities to the data
-merged_data$prob <- pred
+predicted_data$prob <- pred
 
 
 
