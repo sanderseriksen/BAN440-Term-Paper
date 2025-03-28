@@ -97,6 +97,14 @@ pred <- predict(logit, newdata = predicted_data, type = "response")
 # Add the predicted probabilities to the data
 predicted_data$prob <- pred
 
+# Filter the predicted data to only contain observations without a store and 
+# more than 15 on "dist_to_nearest_store". Arrange descending by "prob"
+predicted_data %>%
+  filter(Number_of_stores == 0,
+         Dist_nearest > 10) %>% 
+  arrange(desc(prob)) %>%
+  select(Mun_name, prob, Dist_nearest, Sales, Population, Region_Name)
+
 
 
 
