@@ -103,9 +103,9 @@ predicted_data <- Vinmonopolet_market %>%
 
 ## Logit regression ############################################################
 
-# 1) Make sure the factor for Number_of_stores has valid R variable names
-#    that won't cause errors in caret. For instance, rename "0" -> "NoStore"
-#    and "1" -> "OneStore".
+# Make sure the factor for Number_of_stores has valid R variable names
+# that won't cause errors in caret. For instance, rename "0" -> "NoStore"
+# and "1" -> "OneStore".
 data_for_logit <- predicted_data %>%
   mutate(Number_of_stores = as.factor(Number_of_stores))
 
@@ -116,7 +116,7 @@ data_for_logit$Number_of_stores <- factor(
   labels = c("NoStore", "OneStore")
 )
 
-# 2) Set up k-fold cross-validation parameters
+# Set up k-fold cross-validation parameters
 set.seed(123)  # for reproducibility
 
 my_control <- trainControl(
@@ -126,9 +126,9 @@ my_control <- trainControl(
   summaryFunction = twoClassSummary
 )
 
-# 3) Train the logistic model with cross-validation
+# Train the logistic model with cross-validation
 cv_model <- train(
-  Number_of_stores ~ Sales + Population + Grensehandel + n_stays + Monthly_salary,
+  Number_of_stores ~ Sales,
   data = data_for_logit,
   method = "glm",
   family = binomial,
@@ -136,23 +136,49 @@ cv_model <- train(
   metric = "ROC"            # use AUC (Area Under the Curve) as our metric
 )
 
-# 4) Review cross-validation results
+# Review cross-validation results
 print(cv_model)
 print(cv_model$results)
 
-# 5) Get predicted probabilities from the final trained model
-#    caret retrains on the entire dataset after CV by default
-predicted_data$prob_cv <- predict(cv_model, newdata = data_for_logit, type = "prob")[, "OneStore"]
+# Get predicted probabilities from the final trained model
+# caret retrains on the entire dataset after CV by default
+predicted_data$prob <- predict(cv_model, newdata = data_for_logit, type = "prob")[, "OneStore"]
 
-# 6) Use the probabilities for your recommendations
+# Use the probabilities for your recommendations
 recommended_stores <- predicted_data %>%
   mutate(Number_of_stores = as.integer(as.character(Number_of_stores))) %>%
   filter(Number_of_stores == 0, Dist_nearest > 15) %>%
-  arrange(desc(prob_cv)) %>%
-  select(Mun_name, prob_cv, Dist_nearest, Sales, Population, Region_Name)
+  arrange(desc(prob)) %>%
+  select(Mun_name, prob, Dist_nearest, Sales, Population, Region_Name)
 
 head(recommended_stores, 10)  # for example, show top 10
 
-# 7) Output the top 10 recommended stores as a nice table using kable 
+# Output the top 10 recommended stores as a nice table using kable 
 # And save it 
 kable(head(recommended_stores, 10), format = "markdown")
+
+
+## Policy-driven distance adjustment ###########################################
+
+# Apply the penalty to create a policy-adjusted score
+predicted_data <- predicted_data %>%
+  mutate(
+    penalty =
+      case_when(
+        Dist_nearest < 5 ~ 0.30,
+        Dist_nearest < 10 ~ 0.20,
+        Dist_nearest < 15 ~ 0.10,
+        TRUE ~ 0
+      ),
+    score = prob - penalty
+  )
+
+# Rank municipalities by final policy-adjusted score
+df_ranked <- predicted_data %>%
+  arrange(desc(score))
+
+# Inspect top 10 municipalities recommended for a new store
+top10 <- head(df_ranked, 10)
+
+top10
+

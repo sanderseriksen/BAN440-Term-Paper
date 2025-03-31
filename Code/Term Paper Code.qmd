@@ -143,7 +143,6 @@ stargazer(reg1, type = "text")
 
 ```
 
-
 ```{r logit, message = FALSE, warning = TRUE}
 
 ## Logit regression ############################################################
@@ -173,7 +172,7 @@ my_control <- trainControl(
 
 # 3) Train the logistic model with cross-validation
 cv_model <- train(
-  Number_of_stores ~ Sales + Population + Grensehandel + n_stays + Monthly_salary,
+  Number_of_stores ~ Sales,
   data = data_for_logit,
   method = "glm",
   family = binomial,
@@ -200,7 +199,18 @@ head(recommended_stores, 10)  # for example, show top 10
 
 # 7) Output the top 10 recommended stores as a nice table using kable 
 # And save it 
-kable(head(recommended_stores, 10), format = "markdown")
+# Assuming 'recommended_stores' is your data frame
+# Round numeric columns to 3 decimal places
+library(knitr)
+library(kableExtra)
 
+# Assuming 'recommended_stores' is your data frame
+# Round numeric columns to 3 decimal places
+recommended_stores_rounded <- recommended_stores
+numeric_columns <- sapply(recommended_stores_rounded, is.numeric)
+recommended_stores_rounded[numeric_columns] <- lapply(recommended_stores_rounded[numeric_columns], round, 3)
+
+# Output the top 10 recommended stores as a nice table using kable
+kable(head(recommended_stores_rounded, 10), format = "latex", booktabs = TRUE) %>%
+  kable_styling(latex_options = c("hold_position", "scale_down"))
 ```
-

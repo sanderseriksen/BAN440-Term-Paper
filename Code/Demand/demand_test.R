@@ -122,8 +122,12 @@ predicted_data %>%
   arrange(desc(prob)) %>%
   select(Mun_name, prob, Dist_nearest, Sales, Population, Region_Name)
 
+# ROC value of the model
+library(pROC)
 
+roc <- roc(predicted_data$Number_of_stores, predicted_data$prob)
 
+roc$auc
 
 
 
