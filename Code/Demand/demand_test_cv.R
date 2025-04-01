@@ -48,6 +48,9 @@ lm_Area <- lm(Sales ~ Area, data = train_data)
 
 summary(lm_Area)
 
+lm_pop <- lm(Sales ~ Population, data = Vinmonopolet_market)
+
+summary(lm_pop)
 
 # Linear regression model for predicting sales with all the variables
 var_test <- lm(Sales ~ Population + Grensehandel + n_stays + Monthly_salary + Area +
