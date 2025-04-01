@@ -19,11 +19,6 @@ Vinmonopolet_market <- read_excel("demand_data.xlsx")
 # Narrowing down the data to only contain relevant markets
 # Excluding the largest cities because they are not representative
 
-# Filter out the largest cities
-demand_data <- Vinmonopolet_market %>%
-  filter(Population < 150) %>% 
-  mutate(Number_of_stores = as.factor(Number_of_stores))
-
 # Train and test split, training data all observations with a store
 train_data <- Vinmonopolet_market %>%
   filter(Number_of_stores > 0)
@@ -90,8 +85,8 @@ test_data$Sales_pred <- predict(reg1, newdata = test_data)
 test_data <- test_data %>%
   select(Municipality_Code, Sales_pred)
 
-# Merge the data frames
-predicted_data <- Vinmonopolet_market %>%
+# Merge predicted demand (sales) back into the original data
+Vinmonopolet_market <- Vinmonopolet_market %>%
   left_join(test_data, by = "Municipality_Code") %>%
   mutate(Sales = ifelse(Sales == 0, Sales_pred, Sales)) %>%
   select(-Sales_pred) %>% 
@@ -106,7 +101,7 @@ predicted_data <- Vinmonopolet_market %>%
 # Make sure the factor for Number_of_stores has valid R variable names
 # that won't cause errors in caret. For instance, rename "0" -> "NoStore"
 # and "1" -> "OneStore".
-data_for_logit <- predicted_data %>%
+data_for_logit <- Vinmonopolet_market %>%
   mutate(Number_of_stores = as.factor(Number_of_stores))
 
 # Rename factor levels (originally "0" and "1") to "NoStore" and "OneStore"
@@ -142,10 +137,10 @@ print(cv_model$results)
 
 # Get predicted probabilities from the final trained model
 # caret retrains on the entire dataset after CV by default
-predicted_data$prob <- predict(cv_model, newdata = data_for_logit, type = "prob")[, "OneStore"]
+Vinmonopolet_market$prob <- predict(cv_model, newdata = data_for_logit, type = "prob")[, "OneStore"]
 
 # Use the probabilities for your recommendations
-recommended_stores <- predicted_data %>%
+recommended_stores <- Vinmonopolet_market %>%
   mutate(Number_of_stores = as.integer(as.character(Number_of_stores))) %>%
   filter(Number_of_stores == 0, Dist_nearest > 15) %>%
   arrange(desc(prob)) %>%
@@ -161,7 +156,7 @@ kable(head(recommended_stores, 10), format = "markdown")
 ## Policy-driven distance adjustment ###########################################
 
 # Apply the penalty to create a policy-adjusted score
-predicted_data <- predicted_data %>%
+Vinmonopolet_market <- Vinmonopolet_market %>%
   mutate(
     penalty =
       case_when(
@@ -174,12 +169,12 @@ predicted_data <- predicted_data %>%
   )
 
 # Rank municipalities by final policy-adjusted score
-df_ranked <- predicted_data %>%
+recommended_stores <- Vinmonopolet_market %>%
   filter(Number_of_stores == 0) %>%
   arrange(desc(score))
 
 # Inspect top 10 municipalities recommended for a new store
-top10 <- head(df_ranked, 10)
+top10 <- head(recommended_stores, 10)
 
 top10
 
