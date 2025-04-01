@@ -54,11 +54,7 @@ var_test <- lm(Sales ~ Population + Grensehandel + n_stays + Monthly_salary + Ar
                  Number_of_stores + Spread,
                data = Vinmonopolet_market)
 
-var_test1 <- lm(Sales ~ Population + Grensehandel + n_stays + Monthly_salary + Area +
-                  Number_of_stores + Spread,
-                data = demand_data)
-
-stargazer(var_test, var_test1, type = "text")
+stargazer(var_test, type = "text")
 
 # From these regressions we see that we want to remove the "Area" and "prop_spread" variables
 # from the regressions as they are not significant.
@@ -142,9 +138,9 @@ Vinmonopolet_market$prob <- predict(cv_model, newdata = data_for_logit, type = "
 # Use the probabilities for your recommendations
 recommended_stores <- Vinmonopolet_market %>%
   mutate(Number_of_stores = as.integer(as.character(Number_of_stores))) %>%
-  filter(Number_of_stores == 0, Dist_nearest > 15) %>%
+  filter(Number_of_stores == 0, Dist_nearest > 0) %>%
   arrange(desc(prob)) %>%
-  select(Mun_name, prob, Dist_nearest, Sales, Population, Region_Name)
+  select(Mun_name, prob, Dist_nearest, Sales, Population, Region_Name, Active)
 
 head(recommended_stores, 10)  # for example, show top 10
 
@@ -153,30 +149,16 @@ head(recommended_stores, 10)  # for example, show top 10
 kable(head(recommended_stores, 10), format = "markdown")
 
 
-## Policy-driven distance adjustment ###########################################
+# Use the probabilities for your recommendations
+Active_stores <- Vinmonopolet_market %>%
+  mutate(Number_of_stores = as.integer(as.character(Number_of_stores))) %>%
+  filter(Active == 1, Dist_nearest > 0) %>%
+  arrange(desc(prob)) %>%
+  select(Mun_name, prob, Dist_nearest, Sales, Population, Region_Name, Active)
 
-# Apply the penalty to create a policy-adjusted score
-Vinmonopolet_market <- Vinmonopolet_market %>%
-  mutate(
-    penalty =
-      case_when(
-        Dist_nearest < 5 ~ 0.30,
-        Dist_nearest < 10 ~ 0.20,
-        Dist_nearest < 15 ~ 0.10,
-        TRUE ~ 0
-      ),
-    score = prob - penalty
-  )
+head(Active_stores, 10)  # for example, show top 10
 
-# Rank municipalities by final policy-adjusted score
-recommended_stores <- Vinmonopolet_market %>%
-  filter(Number_of_stores == 0) %>%
-  arrange(desc(score))
-
-# Inspect top 10 municipalities recommended for a new store
-top10 <- head(recommended_stores, 10)
-
-top10
-
-
+# Output the top 10 recommended stores as a nice table using kable 
+# And save it 
+kable(head(Active_stores, 10), format = "markdown")
 
