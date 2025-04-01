@@ -279,6 +279,42 @@ concentration$Municipality_Code <- substr(concentration$Municipality_Code, 3, nc
 Vinmonopolet_market <- left_join(Vinmonopolet_market, concentration, by = "Municipality_Code")
 
 
+## Merge 5: "Active" stores ####################################################
+
+# Load data
+A1 <- read_excel("Active.xlsx", sheet = 1, skip = 2)
+
+A2 <- read_excel("Active.xlsx", sheet = 2, skip = 2)
+
+# Merge the two data sets
+Active <- A1 %>% 
+  bind_rows(A2) %>% 
+  select(-c('1', '...3', Fylke))
+
+# Rename columns
+names(Active)[1] <- "Mun_name"
+
+# Remove unncessary spaces and numbers from the "Mun_name" column
+Active$Mun_name <- substr(Active$Mun_name, 4, nchar(Active$Mun_name))
+
+Active$Mun_name <- trimws(Active$Mun_name, which = "left")
+
+# Replace norwegian special letters with english ones and make all letters lowercase
+Active$Mun_name <- tolower(iconv(Active$Mun_name, from = "UTF-8", to = "ASCII//TRANSLIT"))
+
+# Recode the "Mun_name" column
+Active$Mun_name <- case_when(
+  Active$Mun_name == "hamaroy" ~ "habmer - hamaroy",
+  Active$Mun_name == "hattfjelldal" ~ "aarborte - hattfjelldal",
+  Active$Mun_name == "valer (viken)" ~ "valer (ostfold)",
+  TRUE ~ Active$Mun_name)
+  
+# Merge with the main data set
+
+# Make a dummy variable for active stores
+Vinmonopolet_market$Active <- ifelse(Vinmonopolet_market$Mun_name %in% Active$Mun_name, 1, 0)
+
+## Write to Excel ##############################################################
 
 # Write to Excel
 write_xlsx(Vinmonopolet_market, "demand_data.xlsx")
