@@ -175,6 +175,7 @@ predicted_data <- predicted_data %>%
 
 # Rank municipalities by final policy-adjusted score
 df_ranked <- predicted_data %>%
+  filter(Number_of_stores == 0) %>%
   arrange(desc(score))
 
 # Inspect top 10 municipalities recommended for a new store
