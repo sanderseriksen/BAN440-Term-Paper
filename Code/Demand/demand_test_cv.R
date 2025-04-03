@@ -52,6 +52,13 @@ lm_pop <- lm(Sales ~ Population, data = Vinmonopolet_market)
 
 summary(lm_pop)
 
+small_data <- Vinmonopolet_market %>% 
+  filter(Number_of_stores == 1 | 0)
+
+lm_pop_test <- lm(Sales ~ Population, data = small_data)
+
+summary(lm_pop_test)
+
 # Linear regression model for predicting sales with all the variables
 var_test <- lm(Sales ~ Population + Grensehandel + n_stays + Monthly_salary + Area +
                  Number_of_stores + Spread,
