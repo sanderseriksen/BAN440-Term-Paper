@@ -16,11 +16,12 @@ municipalities <- municipalities %>%
 predicted_data$Municipality_Code <- as.numeric(predicted_data$Municipality_Code)
 
 predicted_data <- predicted_data %>%
+  filter(Number_of_stores == 0) %>%
   mutate(prob_category = case_when(
-    prob >= 0 & prob < 0.25 ~ "Low",
-    prob >= 0.25 & prob < 0.5 ~ "Medium Low",
-    prob >= 0.5 & prob < 0.75 ~ "Medium High",
-    prob >= 0.75 & prob <= 1 ~ "High",
+    prob_cv >= 0 & prob_cv < 0.25 ~ "Low",
+    prob_cv >= 0.25 & prob_cv < 0.5 ~ "Medium Low",
+    prob_cv >= 0.5 & prob_cv < 0.75 ~ "Medium High",
+    prob_cv >= 0.75 & prob_cv <= 1 ~ "High",
     TRUE ~ NA_character_
   ))
 
@@ -36,5 +37,12 @@ ggplot(merged_prob_data) +
     na.value = "grey",
     name = "Probability"
   ) +
+  coord_sf() +
   theme_minimal() +
-  labs(title = "Predicted Probability by Municipality in Norway")
+  theme(
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks = element_blank()
+  ) +
+  labs(title = "Predicted Probability by 0 store municipalities",
+       x = NULL, y = NULL)

@@ -48,8 +48,11 @@ ggplot(merged_data) +
     name = "Number of Stores"
   ) +
   theme_minimal() +
-  labs(title = "Store Distribution by Municipality in Norway")
-
+  theme(
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks = element_blank())
+    
 
 
 
