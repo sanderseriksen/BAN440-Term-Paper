@@ -37,6 +37,8 @@ library(geosphere)
 library(caret)
 library(kableExtra)
 library(tidymodels)
+library(sf)
+library(csmaps)
 ```
 
 # Data
@@ -1193,4 +1195,124 @@ kable(head(Active_stores, 10),
       digits = 3,
       longtable = TRUE) %>%
   kable_styling(latex_options = "scale_down")
+```
+
+# Visualisations
+
+```{r map1, message = FALSE, warning = FALSE}
+
+# Use the existing municipality map data
+municipalities <- nor_municip_map_b2024_default_sf 
+
+# Read your store dataset
+store_data_path <- here("Data", "Vinmonopolet", "final_data_24.xlsx")
+store_data <- readxl::read_excel(store_data_path)
+
+# Extract the last 4 digits from "location_code" to get the municipality code
+municipalities <- municipalities %>%
+  mutate(municip_code = as.integer(str_sub(location_code, -4)))  # Extract last 4 digits
+
+# Count the number of stores per municipality
+store_counts <- store_data %>%
+  group_by(Municipality_Code) %>%  
+  summarise(num_stores = n())
+
+# Changing to matching format
+store_counts$Municipality_Code <- as.numeric(store_counts$Municipality_Code)
+
+# Merge store counts with the geographical dataset
+merged_data <- municipalities %>%
+  left_join(store_counts, by = c("municip_code" = "Municipality_Code"))
+
+# Assign store categories, treating NA as 0
+merged_data <- merged_data %>%
+  mutate(store_category = case_when(
+    is.na(num_stores) ~ "0",
+    num_stores == 1 ~ "1",
+    num_stores %in% 2:3 ~ "2-3",
+    num_stores %in% 4:5 ~ "4-5",
+    num_stores %in% 6:9 ~ "6-9",
+    num_stores >= 10 ~ "10+",
+    TRUE ~ NA_character_
+  ))
+
+# Make sure factor levels are ordered correctly
+merged_data$store_category <- factor(
+  merged_data$store_category,
+  levels = c("0", "1", "2-3", "4-5", "6-9", "10+")
+)
+
+# Plot the heatmap with discrete color bins
+ggplot(merged_data) +
+  geom_sf(aes(fill = store_category), color = "white", size = 0.1) +
+  scale_fill_manual(
+    values = c("0" = "grey", "1" = "yellow", "2-3" = "orange", "4-5" = "red", "6-9" = "purple", "10+" = "darkred"),
+    name = "Number of Stores"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks = element_blank()) + 
+  labs(title = "Store Distribution by Municipality",
+       x = NULL, y = NULL) 
+
+    
+
+```
+
+```{r map2, message = FALSE, warning = FALSE}
+
+# Extract the last 4 digits from "location_code" to get the municipality code
+municipalities <- municipalities %>%
+  mutate(municip_code = as.integer(str_sub(location_code, -4)))  # Extract last 4 digits
+
+# Merge population data with the existing geographical dataset
+Vinmonopolet_market$mun_code <- as.numeric(Vinmonopolet_market$mun_code)
+
+# Add a "prob_category" for municipalities that have at least one store
+Vinmonopolet_market <- Vinmonopolet_market %>%
+  mutate(prob_category = case_when(
+    number_of_stores > 0 ~ "Has a store",
+    prob >= 0 & prob < 0.25 ~ "Low",
+    prob >= 0.25 & prob < 0.5 ~ "Medium Low",
+    prob >= 0.5 & prob < 0.75 ~ "Medium High",
+    prob >= 0.75 & prob <= 1 ~ "High",
+    TRUE ~ NA_character_
+  ))
+
+# Set factor levels to control legend order
+Vinmonopolet_market$prob_category <- factor(Vinmonopolet_market$prob_category,
+                                       levels = c("High", "Medium High", "Medium Low", "Low", "Has a store"))
+
+merged_prob_data <- municipalities %>%
+  left_join(Vinmonopolet_market, by = c("municip_code" = "mun_code")) %>%
+  mutate(prob_category = replace_na(prob_category, "Has a store"))  # Fill NAs with "Has a store"
+
+# Plot
+ggplot(merged_prob_data) +
+  geom_sf(aes(fill = prob_category), color = "white", size = 0.1) +
+  scale_fill_manual(
+    values = c(
+      "High" = "darkgreen",
+      "Medium High" = "#90EE90",
+      "Medium Low" = "#FF6666",
+      "Low" = "darkred",
+      "Has a store" = "grey"
+    ),
+    name = "Probability"
+  ) +
+  coord_sf() +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks = element_blank()
+  ) +
+  labs(title = "Predicted Probability by Municipality",
+       x = NULL, y = NULL)
+
+
 ```
