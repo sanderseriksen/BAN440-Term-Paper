@@ -35,6 +35,8 @@ library(tidyr) # Load tidyr for unnesting
 library(writexl)
 library(geosphere)
 library(caret)
+library(kableExtra)
+library(tidymodels)
 ```
 
 # Data
@@ -983,20 +985,41 @@ Vinmonopolet_market$Active <- ifelse(Vinmonopolet_market$Mun_name %in% Active$Mu
 
 ## Data preparation
 
-```{r prep data, message = FALSE, warning = FALSE}
+```{r prep data, message = FALSE, warning = FALSE, results = 'hide'}
 
 ### Data preparation ###########################################################
+
+# Rename relevant columns in accordance with tidyverse standards
+Vinmonopolet_market <- Vinmonopolet_market %>%
+  rename(
+    mun_code = Municipality_Code,
+    mun_name = Mun_name,
+    region_name = Region_Name,
+    population = Population,
+    area = Area,
+    number_of_stores = Number_of_stores,
+    sales = Sales,
+    lat = Lat,
+    lon = Lon,
+    dist_nearest = Dist_nearest,
+    grensehandel = Grensehandel,
+    n_stays = n_stays,
+    monthly_salary = Monthly_salary,
+    spread = Spread,
+    active = Active
+  )
+
 
 # Narrowing down the data to only contain relevant markets
 # Excluding the largest cities because they are not representative
 
 # Train and test split, training data all observations with a store
 train_data <- Vinmonopolet_market %>%
-  filter(Number_of_stores > 0)
+  filter(number_of_stores > 0)
 
 # Test data all observations without a store
 test_data <- Vinmonopolet_market %>%
-  filter(Number_of_stores == 0)
+  filter(number_of_stores == 0)
 
 ```
 
@@ -1007,47 +1030,49 @@ test_data <- Vinmonopolet_market %>%
 ### Model selection ###########################################################
 
 # Forward selection
-forward_model <- step(lm(Sales ~ 1, data = train_data), 
-                      scope = ~ Population + Grensehandel + n_stays + Monthly_salary + Area + Number_of_stores + Spread,
+forward_model <- step(lm(sales ~ 1, data = train_data), 
+                      scope = ~ population + grensehandel + n_stays + monthly_salary + area + number_of_stores + spread,
                       direction = "forward")
 
-summary(forward_model)
+#summary(forward_model)
 
 # Backward selection
-backward_model <- step(lm(Sales ~ Population + Grensehandel + n_stays + Monthly_salary + Area + Number_of_stores + Spread, 
+backward_model <- step(lm(sales ~ population + grensehandel + n_stays + monthly_salary + area + number_of_stores + spread, 
                           data = train_data), 
                        direction = "backward")
 
-summary(backward_model)
+#summary(backward_model)
 
 
-lm_Area <- lm(Sales ~ Area, data = train_data)
+lm_Area <- lm(sales ~ area, data = train_data)
 
-summary(lm_Area)
+#summary(lm_Area)
 
-lm_pop <- lm(Sales ~ Population, data = Vinmonopolet_market)
+lm_pop <- lm(sales ~ population, data = Vinmonopolet_market)
 
-summary(lm_pop)
+#summary(lm_pop)
 
 small_data <- Vinmonopolet_market %>% 
-  filter(Number_of_stores == 1 | 0)
+  filter(number_of_stores == 1 | 0)
 
-lm_pop_test <- lm(Sales ~ Population, data = small_data)
+lm_pop_test <- lm(sales ~ population, data = small_data)
 
-summary(lm_pop_test)
+#summary(lm_pop_test)
 
 # Linear regression model for predicting sales with all the variables
-var_test <- lm(Sales ~ Population + Grensehandel + n_stays + Monthly_salary + Area +
-                 Number_of_stores + Spread,
+var_test <- lm(sales ~ population + grensehandel + n_stays + monthly_salary + area +
+                 number_of_stores + spread,
                data = Vinmonopolet_market)
 
-stargazer(var_test, type = "text")
+#stargazer(var_test, type = "text")
 
 # From these regressions we see that we want to remove the "Area" and "prop_spread" variables
 # from the regressions as they are not significant.
 
 
 ```
+
+\newpage
 
 ## Demand estimation
 
@@ -1058,32 +1083,33 @@ stargazer(var_test, type = "text")
 ## Linear regression
 
 # Predicting sales using the training data
-reg1 <- lm(Sales ~ Population + Grensehandel + n_stays + Monthly_salary,
+reg1 <- lm(sales ~ population + grensehandel + n_stays + monthly_salary,
            data = train_data)
 
-summary(reg1)
-
+stargazer(reg1, type = "text")
 
 # Applying the model on the test data
-test_data$Sales_pred <- predict(reg1, newdata = test_data)
+test_data$sales_pred <- predict(reg1, newdata = test_data)
 
 ## Merge predicted data into the original data
 
 # Deselect unnecessary columns to merge the data easier
 test_data <- test_data %>%
-  select(Municipality_Code, Sales_pred)
+  select(mun_code, sales_pred)
 
 # Merge predicted demand (sales) back into the original data
 Vinmonopolet_market <- Vinmonopolet_market %>%
-  left_join(test_data, by = "Municipality_Code") %>%
-  mutate(Sales = ifelse(Sales == 0, Sales_pred, Sales)) %>%
-  select(-Sales_pred) %>% 
-  mutate(Sales = ifelse(Sales < 0, 0, Sales),
-         Number_of_stores = as.integer(Number_of_stores)) %>% 
-  filter(Number_of_stores < 2)
+  left_join(test_data, by = "mun_code") %>%
+  mutate(sales = ifelse(sales == 0, sales_pred, sales)) %>%
+  select(-sales_pred) %>% 
+  mutate(sales = ifelse(sales < 0, 0, sales),
+         number_of_stores = as.integer(number_of_stores)) %>% 
+  filter(number_of_stores < 2)
 
 
 ```
+
+\newpage
 
 ## Logit model
 
@@ -1095,11 +1121,11 @@ Vinmonopolet_market <- Vinmonopolet_market %>%
 # that won't cause errors in caret. For instance, rename "0" -> "NoStore"
 # and "1" -> "OneStore".
 data_for_logit <- Vinmonopolet_market %>%
-  mutate(Number_of_stores = as.factor(Number_of_stores))
+  mutate(number_of_stores = as.factor(number_of_stores))
 
 # Rename factor levels (originally "0" and "1") to "NoStore" and "OneStore"
-data_for_logit$Number_of_stores <- factor(
-  data_for_logit$Number_of_stores,
+data_for_logit$number_of_stores <- factor(
+  data_for_logit$number_of_stores,
   levels = c("0", "1"),
   labels = c("NoStore", "OneStore")
 )
@@ -1116,7 +1142,7 @@ my_control <- trainControl(
 
 # Train the logistic model with cross-validation
 cv_model <- train(
-  Number_of_stores ~ Sales,
+  number_of_stores ~ sales,
   data = data_for_logit,
   method = "glm",
   family = binomial,
@@ -1132,33 +1158,39 @@ print(cv_model$results)
 # caret retrains on the entire dataset after CV by default
 Vinmonopolet_market$prob <- predict(cv_model, newdata = data_for_logit, type = "prob")[, "OneStore"]
 
-# Use the probabilities for your recommendations
+# For recommended stores
 recommended_stores <- Vinmonopolet_market %>%
-  mutate(Number_of_stores = as.integer(as.character(Number_of_stores))) %>%
-  filter(Number_of_stores == 0, Dist_nearest > 0) %>%
+  mutate(number_of_stores = as.integer(as.character(number_of_stores))) %>%
+  filter(number_of_stores == 0, dist_nearest > 0) %>%
   arrange(desc(prob)) %>%
-  select(Mun_name, prob, Dist_nearest, Sales, Population, Region_Name, Active)
+  select(mun_name, prob, dist_nearest, sales, population, region_name, active) %>%
+  mutate(across(where(is.numeric), ~round(., 3)))  # Round numeric columns to 3 decimals
 
-head(recommended_stores, 10)  # for example, show top 10
+# Create table
+kable(head(recommended_stores, 10), 
+      format = "markdown",
+      digits = 3,
+      longtable = TRUE) %>%
+  kable_styling(latex_options = "scale_down")
 
-# Output the top 10 recommended stores as a nice table using kable 
-# And save it 
-kable(head(recommended_stores, 10), format = "markdown")
+```
 
+\newpage
 
-# Use the probabilities for your recommendations
+```{r table_2, message = FALSE, warning = FALSE}
+
+# For active stores
 Active_stores <- Vinmonopolet_market %>%
-  mutate(Number_of_stores = as.integer(as.character(Number_of_stores))) %>%
-  filter(Active == 1, Dist_nearest > 0) %>%
+  mutate(number_of_stores = as.integer(as.character(number_of_stores))) %>%
+  filter(active == 1, dist_nearest > 0) %>%
   arrange(desc(prob)) %>%
-  select(Mun_name, prob, Dist_nearest, Sales, Population, Region_Name, Active)
+  select(mun_name, prob, dist_nearest, sales, population, region_name, active) %>%
+  mutate(across(where(is.numeric), ~round(., 3)))  # Round numeric columns to 3 decimals
 
-head(Active_stores, 10)  # for example, show top 10
-
-# Output the top 10 recommended stores as a nice table using kable 
-# And save it 
-kable(head(Active_stores, 10), format = "markdown")
-
-
-
+# Create table
+kable(head(Active_stores, 10), 
+      format = "markdown",
+      digits = 3,
+      longtable = TRUE) %>%
+  kable_styling(latex_options = "scale_down")
 ```
