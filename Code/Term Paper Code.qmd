@@ -1,6 +1,6 @@
 ---
 title: "BAN440 - Term Paper Code"
-author: "Candidate numbers: xx, xx, xx"
+author: "Candidate numbers: 74, 79, 85"
 format:
   pdf:
     font: times new roman
@@ -15,30 +15,32 @@ format:
 editor: visual
 ---
 
+\newpage
+
 # Packages used
 
 ```{r libraries, message = FALSE, warning = FALSE, results = 'hide'}
 
 # relevant libraries
-library(tidyverse)
-library(readxl)
-library(fastDummies)
-library(knitr)
-library(stargazer)
-library(caret)
-library(here)
-library(httr)
-library(jsonlite)
-library(readr)
-library(stringr)
-library(tidyr) # Load tidyr for unnesting
-library(writexl)
-library(geosphere)
-library(caret)
-library(kableExtra)
-library(tidymodels)
-library(sf)
-library(csmaps)
+library(tidyverse)       # For data manipulation
+library(readxl)          # For reading Excel files
+library(fastDummies)     # For creating dummy variables
+library(knitr)           # For creating tables
+library(stargazer)       # For creating regression tables
+library(caret)           # For data splitting and model evaluation
+library(here)            # For file path management
+library(httr)            # For API requests
+library(jsonlite)        # For JSON parsing
+library(readr)           # For reading CSV files
+library(stringr)         # For string manipulation
+library(tidyr)           # For unnesting
+library(writexl)         # For writing Excel files
+library(geosphere)       # For distance calculations
+library(caret)           # For data splitting and model evaluation
+library(kableExtra)      # For creating tables
+library(tidymodels)      # For machine learning
+library(sf)              # For spatial data handling
+library(csmaps)          # For spatial data visualization
 ```
 
 # Data
