@@ -1168,7 +1168,11 @@ recommended_stores <- Vinmonopolet_market %>%
   filter(number_of_stores == 0, dist_nearest > 0) %>%
   arrange(desc(prob)) %>%
   select(mun_name, prob, dist_nearest, sales, population, region_name, active) %>%
-  mutate(across(where(is.numeric), ~round(., 3)))  # Round numeric columns to 3 decimals
+  mutate(
+    dist_nearest = round(dist_nearest, 0),  # Round dist_nearest to 0 decimals
+    sales = round(sales, 0),                # Round sales to 0 decimals
+    across(where(is.numeric) & !c(dist_nearest, sales), ~round(., 3))  # Round other numeric columns to 3 decimals
+  )
 
 # Create table
 kable(head(recommended_stores, 10), 
@@ -1189,7 +1193,11 @@ Active_stores <- Vinmonopolet_market %>%
   filter(active == 1, dist_nearest > 0) %>%
   arrange(desc(prob)) %>%
   select(mun_name, prob, dist_nearest, sales, population, region_name, active) %>%
-  mutate(across(where(is.numeric), ~round(., 3)))  # Round numeric columns to 3 decimals
+  mutate(
+    dist_nearest = round(dist_nearest, 0),  # Round dist_nearest to 0 decimals
+    sales = round(sales, 0),                # Round sales to 0 decimals
+    across(where(is.numeric) & !c(dist_nearest, sales), ~round(., 3))  # Round other numeric columns to 3 decimals
+  )
 
 # Create table
 kable(head(Active_stores, 10), 
