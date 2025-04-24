@@ -1207,6 +1207,30 @@ kable(head(Active_stores, 10),
   kable_styling(latex_options = "scale_down")
 ```
 
+\newpage
+
+```{r table_3, message = FALSE, warning = FALSE}
+
+recommended_stores_dist <- Vinmonopolet_market %>%
+  mutate(number_of_stores = as.integer(as.character(number_of_stores))) %>%
+  filter(number_of_stores == 0, dist_nearest > 0) %>%
+  arrange(desc(dist_nearest)) %>%   # Sort by dist_nearest, descending
+  select(mun_name, prob, dist_nearest, sales, population, region_name, active) %>%
+  mutate(
+    dist_nearest = round(dist_nearest, 0),  # Round dist_nearest to 0 decimals
+    sales = round(sales, 0),                # Round sales to 0 decimals
+    across(where(is.numeric) & !c(dist_nearest, sales), ~round(., 3))  # Round other numeric columns to 3 decimals
+  )
+
+# Create table
+kable(head(recommended_stores_dist, 10), 
+      format = "markdown",
+      digits = 3,
+      longtable = TRUE) %>%
+  kable_styling(latex_options = "scale_down")
+
+```
+
 # Visualisations
 
 ```{r map1, message = FALSE, warning = FALSE}
